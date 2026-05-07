@@ -1,0 +1,9 @@
+{
+  "alias": ["lukana-ops.vercel.app", "lukana-app-seven.vercel.app"],
+  "experimentalServices": {
+    "web": {
+      "routePrefix": "/",
+      "framework": "nextjs"
+    }
+  }
+}

@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lukana — Guia de Acesso ao App</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #f5f4f0;
+    color: #1a1a2e;
+    min-height: 100vh;
+    padding: 32px 16px 48px;
+  }
+
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  /* HEADER */
+  .header {
+    background: #2D3040;
+    border-radius: 20px;
+    padding: 32px 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 28px;
+  }
+
+  .header-left h1 {
+    font-size: 28px;
+    font-weight: 900;
+    color: #CCA969;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+
+  .header-left p {
+    color: rgba(255,255,255,0.45);
+    font-size: 13px;
+    margin-top: 6px;
+  }
+
+  .header-left .url {
+    color: #CCA969;
+    font-weight: 700;
+    font-size: 15px;
+    margin-top: 10px;
+    letter-spacing: 0.3px;
+  }
+
+  /* QR */
+  .qr-wrap {
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  #qr canvas, #qr img {
+    border-radius: 6px;
+  }
+
+  .qr-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #2D3040;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+  }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #9ca3af;
+    margin-bottom: 12px;
+    padding-left: 4px;
+  }
+
+  /* CARDS GRID */
+  .roles-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  @media (max-width: 520px) {
+    .roles-grid { grid-template-columns: 1fr; }
+    .header { flex-direction: column; align-items: flex-start; }
+  }
+
+  .role-card {
+    background: white;
+    border-radius: 16px;
+    padding: 18px 20px;
+    border-left: 4px solid #e5e7eb;
+    position: relative;
+  }
+
+  .role-card.diretor  { border-left-color: #CCA969; }
+  .role-card.gerente  { border-left-color: #6366f1; }
+  .role-card.coord    { border-left-color: #0ea5e9; }
+  .role-card.equipe   { border-left-color: #22c55e; }
+  .role-card.cnc      { border-left-color: #f97316; }
+
+  .role-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+
+  .diretor  .role-badge { background: #fdf3e0; color: #b07d2a; }
+  .gerente  .role-badge { background: #eef2ff; color: #4f46e5; }
+  .coord    .role-badge { background: #e0f2fe; color: #0369a1; }
+  .equipe   .role-badge { background: #dcfce7; color: #16a34a; }
+  .cnc      .role-badge { background: #fff7ed; color: #c2410c; }
+
+  .role-card h3 {
+    font-size: 15px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: #111827;
+  }
+
+  .role-card .dest {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    margin-bottom: 10px;
+  }
+
+  .role-cred {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .cred-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .cred-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #9ca3af;
+    width: 50px;
+    flex-shrink: 0;
+  }
+
+  .cred-val {
+    font-size: 13px;
+    font-weight: 700;
+    background: #f3f4f6;
+    padding: 3px 10px;
+    border-radius: 8px;
+    color: #111827;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  .cred-val.no-pass {
+    background: #dcfce7;
+    color: #16a34a;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+  }
+
+  .role-card .note {
+    font-size: 11px;
+    color: #6b7280;
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  /* STEPS */
+  .steps-card {
+    background: white;
+    border-radius: 20px;
+    padding: 24px 24px 28px;
+    margin-bottom: 28px;
+  }
+
+  .steps-card h2 {
+    font-size: 17px;
+    font-weight: 800;
+    color: #2D3040;
+    margin-bottom: 20px;
+  }
+
+  .step {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 18px;
+    align-items: flex-start;
+  }
+
+  .step:last-child { margin-bottom: 0; }
+
+  .step-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #2D3040;
+    color: #CCA969;
+    font-size: 13px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .step-body h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 4px;
+  }
+
+  .step-body p {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.5;
+  }
+
+  .step-body code {
+    background: #f3f4f6;
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #2D3040;
+    font-family: 'Courier New', monospace;
+  }
+
+  .step-body .tag {
+    display: inline-block;
+    background: #fdf3e0;
+    color: #b07d2a;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+
+  /* DIRECTOR TIP */
+  .director-tip {
+    background: #2D3040;
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 28px;
+  }
+
+  .director-tip h3 {
+    color: #CCA969;
+    font-size: 14px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .director-tip p {
+    color: rgba(255,255,255,0.7);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .director-tip strong {
+    color: #CCA969;
+  }
+
+  /* INSTALL */
+  .install-card {
+    background: white;
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 28px;
+  }
+
+  .install-card h2 {
+    font-size: 15px;
+    font-weight: 800;
+    color: #2D3040;
+    margin-bottom: 16px;
+  }
+
+  .install-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+
+  .install-row:last-child { margin-bottom: 0; }
+
+  .install-icon {
+    font-size: 22px;
+    line-height: 1;
+    flex-shrink: 0;
+    width: 32px;
+    text-align: center;
+  }
+
+  .install-body strong {
+    font-size: 13px;
+    font-weight: 700;
+    color: #111827;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .install-body span {
+    font-size: 12px;
+    color: #6b7280;
+  }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: #9ca3af;
+    padding-top: 8px;
+  }
+
+  /* MATERIAL CARD */
+  .material-card {
+    background: white;
+    border-radius: 20px;
+    padding: 24px 24px 28px;
+    margin-bottom: 28px;
+  }
+
+  .material-card h2 {
+    font-size: 17px;
+    font-weight: 800;
+    color: #2D3040;
+    margin-bottom: 20px;
+  }
+
+  /* AUTOMACOES */
+  .automacoes-card {
+    background: #f0fdf4;
+    border: 1.5px solid #bbf7d0;
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 28px;
+  }
+
+  .automacoes-card h3 {
+    color: #15803d;
+    font-size: 14px;
+    font-weight: 800;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .auto-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  .auto-row:last-child { margin-bottom: 0; }
+
+  .auto-arrow {
+    font-size: 13px;
+    color: #16a34a;
+    font-weight: 900;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .auto-text {
+    font-size: 13px;
+    color: #374151;
+    line-height: 1.5;
+  }
+
+  .auto-text strong { color: #15803d; }
+
+  /* PRINT */
+  @media print {
+    body { background: white; padding: 16px; }
+    .header { break-inside: avoid; }
+    .roles-grid { break-inside: avoid; }
+    .steps-card { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER COM QR -->
+  <div class="header">
+    <div class="header-left">
+      <h1>Lukana Operação</h1>
+      <p>App de gestão da produção — Lukana Marcenaria</p>
+      <div class="url">lukana-ops.vercel.app</div>
+    </div>
+    <div class="qr-wrap">
+      <div id="qr"></div>
+      <div class="qr-label">Escanear para abrir</div>
+    </div>
+  </div>
+
+  <!-- COMO INSTALAR -->
+  <div class="install-card">
+    <h2>📲 Instalar no celular (recomendado)</h2>
+    <div class="install-row">
+      <div class="install-icon">🤖</div>
+      <div class="install-body">
+        <strong>Android (Chrome)</strong>
+        <span>Acesse o link → toque nos 3 pontinhos no canto superior direito → "Adicionar à tela inicial"</span>
+      </div>
+    </div>
+    <div class="install-row">
+      <div class="install-icon">🍎</div>
+      <div class="install-body">
+        <strong>iPhone (Safari)</strong>
+        <span>Acesse o link no Safari → toque no ícone de compartilhar (quadrado com seta) → "Adicionar à Tela de Início"</span>
+      </div>
+    </div>
+    <div class="install-row">
+      <div class="install-icon">💡</div>
+      <div class="install-body">
+        <strong>Funciona como app nativo</strong>
+        <span>Sem precisar baixar da loja. Abre em tela cheia, igual a um app normal.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASSO A PASSO DO LOGIN -->
+  <div class="steps-card">
+    <h2>🔐 Passo a passo do login</h2>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Abra o app e toque em "Sou da Equipe"</h4>
+        <p>Direciona para a tela de login unificada. O Diretor usa o botão "Sou Diretor".</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Selecione a função</h4>
+        <p>Escolha no menu: <code>Marceneiro</code>, <code>Montador</code>, <code>Auxiliar</code>, <code>CNC</code>, <code>Coordenador</code>, <code>Encarregado</code> ou <code>Gerente</code>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Digite seu nome</h4>
+        <p>Escreva seu nome completo ou como prefere ser chamado. Esse nome aparece nos registros — <strong>é com ele que o Diretor vai te identificar.</strong></p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h4>Senha — só se for Coordenador, Encarregado ou Gerente</h4>
+        <p>Marceneiro, Montador, Auxiliar e CNC <strong>não precisam de senha</strong> — só nome e entrar. Coordenador, Encarregado e Gerente recebem a senha <strong>diretamente do Diretor</strong>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <h4>Preencha o formulário do dia</h4>
+        <p>Responda as perguntas do seu turno. Ao final, toque em <code>Enviar</code>. O Diretor recebe tudo em tempo real.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- DICA DIRETOR -->
+  <div class="director-tip">
+    <h3>👁️ Como o Diretor acompanha quem preencheu</h3>
+    <p>
+      Ao entrar como <strong>Diretor</strong>, acesse a aba <strong>Equipe</strong>.
+      Todos os membros que preencheram hoje aparecem com <strong>nome, obra e status</strong> (OK / Atenção / Bloqueio).
+      Basta tocar no card de cada pessoa para ver o que ela respondeu, incluindo pendências e escalações.
+      Na aba <strong>Pedidos</strong>, os pedidos de material mostram quem solicitou e de qual obra.
+    </p>
+  </div>
+
+  <!-- SOLICITACAO DE MATERIAL -->
+  <div class="material-card">
+    <h2>📦 Como solicitar material</h2>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Na tela inicial, toque em <code>MATERIAL</code></h4>
+        <p>Disponível para toda a equipe — não precisa estar logado.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Selecione a obra e informe seu nome</h4>
+        <p>Se já estiver logado, seu nome é preenchido automaticamente.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Adicione os itens necessários</h4>
+        <p>Escolha a categoria (MDF, Corrediça, Fita de Bordo...), preencha as especificações e a quantidade. Repita para cada item.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h4>Revise e envie</h4>
+        <p>Confira os itens na tela de revisão e toque em <code>Enviar pedido</code>. O pedido aparece imediatamente no painel do Coordenador e do Diretor.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUTOMACOES CLICKUP -->
+  <div class="automacoes-card">
+    <h3>⚡ Automações ClickUp</h3>
+    <div class="auto-row">
+      <div class="auto-arrow">→</div>
+      <div class="auto-text"><strong>Vistoria do Coordenador</strong> — ao registrar uma vistoria no app, uma tarefa é criada automaticamente no ClickUp com o status, foto e dados da obra.</div>
+    </div>
+    <div class="auto-row">
+      <div class="auto-arrow">→</div>
+      <div class="auto-text"><strong>Fotos do Gerente</strong> — ao enviar uma foto pela aba Registros, o anexo vai direto para o ClickUp com a data e obra associadas.</div>
+    </div>
+    <div class="auto-row">
+      <div class="auto-arrow">→</div>
+      <div class="auto-text"><strong>Pedido de Material</strong> — cada pedido enviado pelo app aparece no painel do Coordenador em tempo real, com os itens, quantidades e nome do solicitante.</div>
+    </div>
+    <div class="auto-row">
+      <div class="auto-arrow">→</div>
+      <div class="auto-text"><strong>Status do dia (Equipe)</strong> — os formulários preenchidos pela equipe ficam visíveis na aba Equipe do painel do Diretor assim que enviados.</div>
+    </div>
+  </div>
+
+  <!-- TABELA DE ACESSOS -->
+  <p class="section-title">Acessos por função</p>
+  <div class="roles-grid">
+
+    <div class="role-card diretor">
+      <div class="role-badge">Diretor</div>
+      <h3>Luka</h3>
+      <div class="dest">→ Painel CEO completo</div>
+      <div class="role-cred">
+        <div class="cred-row">
+          <span class="cred-label">Função</span>
+          <span class="cred-val">Diretor</span>
+        </div>
+        <div class="cred-row">
+          <span class="cred-label">Nome</span>
+          <span class="cred-val">Luka</span>
+        </div>
+        <div class="cred-row">
+          <span class="cred-label">Senha</span>
+          <span class="cred-val" style="background:#fdf3e0;color:#b07d2a;font-family:'Inter',sans-serif;font-size:12px">Senha pessoal</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="role-card gerente">
+      <div class="role-badge">Gerente</div>
+      <h3>Matheus</h3>
+      <div class="dest">→ Painel Gerente (Fábrica)</div>
+      <div class="role-cred">
+        <div class="cred-row">
+          <span class="cred-label">Função</span>
+          <span class="cred-val">Gerente</span>
+        </div>
+        <div class="cred-row">
+          <span class="cred-label">Senha</span>
+          <span class="cred-val" style="background:#fdf3e0;color:#b07d2a;font-family:'Inter',sans-serif;font-size:12px">Com o Diretor</span>
+        </div>
+      </div>
+      <p class="note">Nome não é obrigatório no login do Gerente.</p>
+    </div>
+
+    <div class="role-card coord">
+      <div class="role-badge">Coordenador / Encarregado</div>
+      <h3>Vinnycius · Luciano</h3>
+      <div class="dest">→ Painel de Obra e Vistoria</div>
+      <div class="role-cred">
+        <div class="cred-row">
+          <span class="cred-label">Função</span>
+          <span class="cred-val">Coordenador</span>
+        </div>
+        <div class="cred-row">
+          <span class="cred-label">Nome</span>
+          <span class="cred-val">Seu nome</span>
+        </div>
+        <div class="cred-row">
+          <span class="cred-label">Senha</span>
+          <span class="cred-val" style="background:#fdf3e0;color:#b07d2a;font-family:'Inter',sans-serif;font-size:12px">Com o Diretor</span>
+        </div>
+      </div>
+      <p class="note">Encarregado também recebe senha diretamente do Diretor.</p>
+    </div>
+
+    <div class="role-card equipe">
+      <div class="role-badge">Marceneiro · Montador · Auxiliar</div>
+      <h3>Equipe de Produção</h3>
+      <div class="dest">→ Formulário do dia + Pedido de Material</div>
+      <div class="role-cred">
+        <div class="cred-row">
+          <span class="cred-label">Função</span>
+          <span class="cred-val">Marceneiro</span>
+        </div>
+        <div class="cred-row">
+          <span class="cred-label">Nome</span>
+          <span class="cred-val">Seu nome</span>
+        </div>
+        <div class="cred-row">
+          <span class="cred-label">Senha</span>
+          <span class="cred-val no-pass">Não precisa</span>
+        </div>
+      </div>
+      <p class="note">Selecione a função, escreva o nome e toque Entrar.</p>
+    </div>
+
+    <div class="role-card cnc">
+      <div class="role-badge">CNC</div>
+      <h3>Operador CNC / Seccionadora</h3>
+      <div class="dest">→ Registro de cortes do dia</div>
+      <div class="role-cred">
+        <div class="cred-row">
+          <span class="cred-label">Função</span>
+          <span class="cred-val">CNC</span>
+        </div>
+        <div class="cred-row">
+          <span class="cred-label">Nome</span>
+          <span class="cred-val">Seu nome</span>
+        </div>
+        <div class="cred-row">
+          <span class="cred-label">Senha</span>
+          <span class="cred-val no-pass">Não precisa</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    Lukana Marcenaria · lukana-ops.vercel.app · Uso interno — não compartilhe as senhas externamente.
+  </div>
+
+</div>
+
+<script>
+  new QRCode(document.getElementById("qr"), {
+    text: "https://lukana-ops.vercel.app",
+    width: 140,
+    height: 140,
+    colorDark: "#2D3040",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.M
+  });
+</script>
+</body>
+</html>

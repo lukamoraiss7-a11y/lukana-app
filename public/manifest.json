@@ -1,0 +1,13 @@
+{
+  "name": "Lukana App",
+  "short_name": "Lukana",
+  "description": "Operação diária Lukana Marcenaria",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2D3040",
+  "theme_color": "#2D3040",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

@@ -1,0 +1,1 @@
+self.__REACT_LOADABLE_MANIFEST='{"app/cnc/page.jsx -> @zxing/browser":{"id":8263,"files":["static/chunks/263.b0fd90ff15d45a84.js"]}}';

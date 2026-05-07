@@ -1,0 +1,7 @@
+{
+  "/gerente/page": "app/gerente/page.js",
+  "/page": "app/page.js",
+  "/coordenadores/page": "app/coordenadores/page.js",
+  "/material/page": "app/material/page.js",
+  "/equipe/page": "app/equipe/page.js"
+}

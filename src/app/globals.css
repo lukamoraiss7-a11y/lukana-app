@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --navy: #2D3040;
+  --navy-l: #3a3e52;
+  --gold: #CCA969;
+  --gold-d: #b8914d;
+  --ok: #22c55e;
+  --duvida: #f59e0b;
+  --bloqueio: #ef4444;
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+
+body {
+  background: #f4f4f6;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  overscroll-behavior: none;
+}
+
+textarea, input, select { font-family: inherit; }
+
+.status-ok    { border-color: var(--ok);      background: #f0fdf4; color: var(--ok); }
+.status-duvida{ border-color: var(--duvida);  background: #fffbeb; color: var(--duvida); }
+.status-bloq  { border-color: var(--bloqueio);background: #fef2f2; color: var(--bloqueio); }
+
+.badge-ok    { background: #f0fdf4; color: var(--ok); }
+.badge-duvida{ background: #fffbeb; color: var(--duvida); }
+.badge-bloq  { background: #fef2f2; color: var(--bloqueio); }
+.badge-vazio { background: #f3f4f6; color: #9ca3af; }
+
+.bar-ok    { background: var(--ok); }
+.bar-risco { background: var(--duvida); }
+.bar-atr   { background: var(--bloqueio); }
+
+@keyframes scan-line {
+  0%   { top: 8px; }
+  50%  { top: calc(100% - 8px); }
+  100% { top: 8px; }
+}
+.animate-scan-line {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  animation: scan-line 2s ease-in-out infinite;
+  box-shadow: 0 0 6px rgba(204,169,105,0.8);
+}
