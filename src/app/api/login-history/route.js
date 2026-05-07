@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { addLoginEvent, getLoginHistory } from '@/lib/db';
+import { addLoginEvent, getLoginHistory, updateUserActivity, getActiveUsers } from '@/lib/db';
 
 export async function GET() {
   try {
-    const history = await getLoginHistory(200);
-    return NextResponse.json(history);
+    const users = await getActiveUsers(300); // 5 minutos
+    return NextResponse.json(users);
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -20,6 +20,8 @@ export async function POST(request) {
       timestamp: body.timestamp || new Date().toISOString(),
     };
     await addLoginEvent(event);
+    // Atualizar atividade do usuário
+    await updateUserActivity(event.id, event.nome, event.role);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });

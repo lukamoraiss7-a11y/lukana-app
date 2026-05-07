@@ -198,3 +198,28 @@ export async function getLoginHistory(limit = 200) {
   const items = await redis.lrange('login:history', 0, limit - 1);
   return (items || []).map((v) => (typeof v === 'string' ? JSON.parse(v) : v));
 }
+
+export async function updateUserActivity(userId, nome, role) {
+  await redis.hset('user:activity', { [userId]: JSON.stringify({ nome, role, timestamp: new Date().toISOString() }) });
+}
+
+export async function getActiveUsers(timeoutSeconds = 300) {
+  const activities = await redis.hgetall('user:activity') || {};
+  const now = Date.now();
+  const users = [];
+
+  Object.entries(activities).forEach(([userId, data]) => {
+    const user = typeof data === 'string' ? JSON.parse(data) : data;
+    const lastActivity = new Date(user.timestamp).getTime();
+    const isOnline = (now - lastActivity) < timeoutSeconds * 1000;
+    users.push({
+      id: userId,
+      nome: user.nome,
+      role: user.role,
+      timestamp: user.timestamp,
+      isOnline,
+    });
+  });
+
+  return users.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+}
