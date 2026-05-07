@@ -1060,7 +1060,13 @@ export default function CeoPage() {
 
   useEffect(() => { if (auth && activeTab === 'pedidos') fetchPedidos(); }, [auth, activeTab, fetchPedidos]);
   useEffect(() => { if (auth && activeTab === 'obras') fetchObras(); }, [auth, activeTab, fetchObras]);
-  useEffect(() => { if (auth && activeTab === 'acessos') fetchLoginHistory(); }, [auth, activeTab, fetchLoginHistory]);
+  useEffect(() => {
+    if (auth && activeTab === 'acessos') {
+      fetchLoginHistory(); // Initial fetch
+      const interval = setInterval(fetchLoginHistory, 10000); // Poll every 10 seconds
+      return () => clearInterval(interval); // Cleanup on unmount or when dependencies change
+    }
+  }, [auth, activeTab, fetchLoginHistory]);
 
   const diaProgress = () => {
     if (!diaData) return { ans: 0, tot: 0 };
@@ -1317,13 +1323,14 @@ export default function CeoPage() {
                 montador: 'Montador', auxiliar: 'Auxiliar', cnc: 'Operador CNC',
               };
               const roleLabel = roleLabels[ev.role] || ev.role;
+              const statusText = ev.isOnline ? '🟢 Online agora' : `⚪ Visto em ${dia} ${hora}`;
               return (
                 <div key={ev.id} className="bg-white rounded-xl shadow-sm px-4 py-3 mb-2 flex items-center gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-sm text-gray-900">{ev.nome}</div>
                     <div className="text-xs text-gray-400">{roleLabel}</div>
                   </div>
-                  <div className="text-[11px] text-gray-400 flex-shrink-0">{dia} · {hora}</div>
+                  <div className="text-[11px] flex-shrink-0" style={{ color: ev.isOnline ? '#22c55e' : '#9ca3af' }}>{statusText}</div>
                 </div>
               );
             })}
