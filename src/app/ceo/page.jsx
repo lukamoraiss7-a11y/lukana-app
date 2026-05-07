@@ -1155,11 +1155,6 @@ export default function CeoPage() {
         <div className="flex items-center gap-2">
           {activeTab === 'meudia' && <span className="text-xs text-gold/80 bg-white/10 px-2.5 py-1 rounded-full">{ans}/{tot}</span>}
           <span className="text-xs text-white/40 px-2 py-1">{dateStr}</span>
-          <select value={viewMode} onChange={(e) => { setViewMode(e.target.value); setActiveTab('acompanhamento'); }}
-            className="text-xs bg-white/10 text-white border border-white/20 rounded px-2 py-1 focus:outline-none focus:border-gold">
-            <option value="diretor">Diretor</option>
-            <option value="acompanhamento">Ariel (Vice)</option>
-          </select>
           <button onClick={handleLogout} className="text-xs text-white/40 hover:text-white/70 px-3 py-1 rounded-lg hover:bg-white/5 transition-all">Sair</button>
         </div>
       </header>
