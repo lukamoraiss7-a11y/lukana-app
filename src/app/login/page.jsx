@@ -16,6 +16,7 @@ const ROLE_CONFIG = {
   auxiliar:             { dest: '/equipe'        },
   cnc:                  { dest: '/cnc'           },
   diretor:              { dest: '/ceo'           },
+  ariel:                { dest: '/ceo'           },
 };
 
 function EyeIcon({ open }) {
@@ -180,6 +181,28 @@ function DiretorLogin({ onSuccess }) {
   );
 }
 
+// Ariel: nome sem senha
+function ArielLogin({ onSuccess }) {
+  const [nome,  setNome]  = useState('');
+  const [error, setError] = useState('');
+  const submit = () => {
+    if (!nome.trim()) { setError('Informe seu nome.'); return; }
+    const user = authenticate('ariel', '', nome);
+    if (!user) { setError('Erro ao entrar.'); return; }
+    onSuccess(user);
+  };
+  return (
+    <div className="w-full max-w-xs space-y-3">
+      <input value={nome} onChange={(e) => { setNome(e.target.value); setError(''); }}
+        placeholder="Seu nome" autoComplete="name" autoCapitalize="words"
+        onKeyDown={(e) => e.key === 'Enter' && submit()}
+        className="w-full px-4 py-3.5 rounded-xl text-sm bg-white/10 text-white border border-white/20 placeholder:text-white/30 focus:outline-none focus:border-gold" />
+      <button onClick={submit} className="w-full py-3.5 bg-gold text-navy font-bold rounded-xl">Entrar</button>
+      {error && <p className="text-red-300 text-sm text-center">{error}</p>}
+    </div>
+  );
+}
+
 const CONTEXT_LABELS = {
   '/gerente':       'Gerente de Fábrica',
   '/coordenadores': 'Coordenadores',
@@ -209,7 +232,8 @@ function LoginForm() {
     router.push(nextUrl !== '/' ? nextUrl : (ROLE_CONFIG[user.role]?.dest || '/'));
   };
 
-  const label = CONTEXT_LABELS[nextUrl] || 'Acesso';
+  let label = CONTEXT_LABELS[nextUrl] || 'Acesso';
+  if (nextUrl === '/ceo' && roleParam === 'ariel') label = 'Ariel';
 
   return (
     <main className="min-h-dvh flex flex-col items-center justify-center p-6 bg-navy">
@@ -221,7 +245,8 @@ function LoginForm() {
       {nextUrl === '/gerente'       && <GerenteLogin onSuccess={onSuccess} />}
       {nextUrl === '/coordenadores' && <CoordLogin   onSuccess={onSuccess} presetRole={roleParam} />}
       {nextUrl === '/equipe'        && <EquipeLogin  onSuccess={onSuccess} />}
-      {nextUrl === '/ceo'           && <DiretorLogin onSuccess={onSuccess} />}
+      {nextUrl === '/ceo' && roleParam === 'ariel' && <ArielLogin onSuccess={onSuccess} />}
+      {nextUrl === '/ceo' && roleParam !== 'ariel' && <DiretorLogin onSuccess={onSuccess} />}
       {!['/gerente','/coordenadores','/equipe','/ceo'].includes(nextUrl) && (
         <p className="text-white/40 text-sm text-center">Acesse pelo menu principal.</p>
       )}

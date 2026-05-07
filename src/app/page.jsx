@@ -16,6 +16,12 @@ export default function Home() {
           Sou Diretor
         </Link>
         <Link
+          href="/login?next=/ceo&role=ariel"
+          className="block w-full py-4 rounded-2xl text-center font-bold text-base bg-gold/80 text-navy active:opacity-80 transition-opacity"
+        >
+          Sou Ariel
+        </Link>
+        <Link
           href="/gerente"
           className="block w-full py-4 rounded-2xl text-center font-bold text-base text-white border-2 border-white/30 bg-white/5 active:opacity-80 transition-opacity"
         >
