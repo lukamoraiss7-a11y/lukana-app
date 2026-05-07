@@ -16,6 +16,7 @@ const ROLE_CONFIG = {
   auxiliar:             { dest: '/equipe'        },
   cnc:                  { dest: '/cnc'           },
   diretor:              { dest: '/ceo'           },
+  ariel:                { dest: '/ceo'           },
 };
 
 function EyeIcon({ open }) {
@@ -57,6 +58,29 @@ function GerenteLogin({ onSuccess }) {
   };
   return (
     <div className="w-full max-w-xs space-y-3">
+      <PasswordInput value={senha} onChange={(e) => { setSenha(e.target.value); setError(''); }} onEnter={submit} />
+      <button onClick={submit} className="w-full py-3.5 bg-gold text-navy font-bold rounded-xl">Entrar</button>
+      {error && <p className="text-red-300 text-sm text-center">{error}</p>}
+    </div>
+  );
+}
+
+// Ariel: só nome + senha (Head de Gestão)
+function ArielLogin({ onSuccess }) {
+  const [nome,  setNome]  = useState('');
+  const [senha, setSenha] = useState('');
+  const [error, setError] = useState('');
+  const submit = () => {
+    if (!nome.trim()) { setError('Informe seu nome.'); return; }
+    const user = authenticate('ariel', senha, nome);
+    if (!user) { setError('Senha incorreta.'); return; }
+    onSuccess(user);
+  };
+  return (
+    <div className="w-full max-w-xs space-y-3">
+      <input value={nome} onChange={(e) => { setNome(e.target.value); setError(''); }}
+        placeholder="Seu nome" autoComplete="name" autoCapitalize="words"
+        className="w-full px-4 py-3.5 rounded-xl text-sm bg-white/10 text-white border border-white/20 placeholder:text-white/30 focus:outline-none focus:border-gold" />
       <PasswordInput value={senha} onChange={(e) => { setSenha(e.target.value); setError(''); }} onEnter={submit} />
       <button onClick={submit} className="w-full py-3.5 bg-gold text-navy font-bold rounded-xl">Entrar</button>
       {error && <p className="text-red-300 text-sm text-center">{error}</p>}
@@ -209,7 +233,8 @@ function LoginForm() {
     router.push(nextUrl !== '/' ? nextUrl : (ROLE_CONFIG[user.role]?.dest || '/'));
   };
 
-  const label = CONTEXT_LABELS[nextUrl] || 'Acesso';
+  let label = CONTEXT_LABELS[nextUrl] || 'Acesso';
+  if (nextUrl === '/ceo' && roleParam === 'ariel') label = 'Head de Gestão';
 
   return (
     <main className="min-h-dvh flex flex-col items-center justify-center p-6 bg-navy">
@@ -221,7 +246,8 @@ function LoginForm() {
       {nextUrl === '/gerente'       && <GerenteLogin onSuccess={onSuccess} />}
       {nextUrl === '/coordenadores' && <CoordLogin   onSuccess={onSuccess} presetRole={roleParam} />}
       {nextUrl === '/equipe'        && <EquipeLogin  onSuccess={onSuccess} />}
-      {nextUrl === '/ceo'           && <DiretorLogin onSuccess={onSuccess} />}
+      {nextUrl === '/ceo' && roleParam === 'ariel' && <ArielLogin onSuccess={onSuccess} />}
+      {nextUrl === '/ceo' && roleParam !== 'ariel' && <DiretorLogin onSuccess={onSuccess} />}
       {!['/gerente','/coordenadores','/equipe','/ceo'].includes(nextUrl) && (
         <p className="text-white/40 text-sm text-center">Acesse pelo menu principal.</p>
       )}

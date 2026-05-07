@@ -929,7 +929,11 @@ export default function CeoPage() {
     setMounted(true);
     const session = getSession();
     setCeoSession(session);
-    if (session?.role === 'diretor' || localStorage.getItem('lukana_ceo_auth') === CEO_PASS) {
+    // Se é ariel, ativa modo acompanhamento automaticamente
+    if (session?.role === 'ariel') {
+      setViewMode('acompanhamento');
+    }
+    if (session?.role === 'diretor' || session?.role === 'ariel' || localStorage.getItem('lukana_ceo_auth') === CEO_PASS) {
       setAuth(true); loadAll();
     }
   }, []);

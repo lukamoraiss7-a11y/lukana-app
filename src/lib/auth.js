@@ -14,12 +14,13 @@ const ROLE_SENHAS = {
   coordenador_obra:     process.env.NEXT_PUBLIC_COORD_OBRA_PASS || 'coordvinny',
   coordenador_projetos: process.env.NEXT_PUBLIC_COORD_PROJ_PASS || 'coordana',
   encarregado:          process.env.NEXT_PUBLIC_ENC_PASS        || 'enc645',
+  ariel:                process.env.NEXT_PUBLIC_ARIEL_PASS      || 'lknariel',
 };
 
 // Roles sem senha (só nome)
 const ROLES_SEM_SENHA = ['marceneiro', 'montador', 'auxiliar', 'cnc'];
 
-// funcao: 'gerente' | 'marceneiro' | 'montador' | 'auxiliar' | 'cnc' | 'coordenador_obra' | 'coordenador_projetos' | 'encarregado' | 'diretor'
+// funcao: 'gerente' | 'marceneiro' | 'montador' | 'auxiliar' | 'cnc' | 'coordenador_obra' | 'coordenador_projetos' | 'encarregado' | 'diretor' | 'ariel'
 export function authenticate(funcao, senha, nome) {
   if (funcao === 'gerente') {
     return USERS.find((u) => u.login === 'gerente' && u.senha === senha) || null;
