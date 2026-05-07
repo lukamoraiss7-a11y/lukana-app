@@ -1060,7 +1060,7 @@ export default function CeoPage() {
 
   useEffect(() => { if (auth && activeTab === 'pedidos') fetchPedidos(); }, [auth, activeTab, fetchPedidos]);
   useEffect(() => { if (auth && activeTab === 'obras') fetchObras(); }, [auth, activeTab, fetchObras]);
-  useEffect(() => { if (auth && activeTab === 'acessos' && ceoSession?.role === 'diretor') fetchLoginHistory(); }, [auth, activeTab, ceoSession, fetchLoginHistory]);
+  useEffect(() => { if (auth && activeTab === 'acessos') fetchLoginHistory(); }, [auth, activeTab, fetchLoginHistory]);
 
   const diaProgress = () => {
     if (!diaData) return { ans: 0, tot: 0 };
@@ -1121,7 +1121,7 @@ export default function CeoPage() {
     { id: 'cnc',     label: 'CNC',      icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8l3 3 3-3 3 3"/></svg> },
     { id: 'pedidos', label: 'Pedidos',   icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4"/></svg> },
     { id: 'estoque', label: 'Estoque',   icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8l-2 4h12l-2-4z"/><path d="M12 12v4M10 14h4"/></svg> },
-    ...(ceoSession?.role === 'diretor' ? [{ id: 'acessos', label: 'Acessos', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg> }] : []),
+    { id: 'acessos', label: 'Acessos', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg> },
   ];
 
   return (
@@ -1296,7 +1296,7 @@ export default function CeoPage() {
           </div>
         )}
 
-        {activeTab === 'acessos' && ceoSession?.role === 'diretor' && (
+        {activeTab === 'acessos' && (
           <div className="px-3 py-3">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs text-gray-400 uppercase tracking-wide font-bold px-1">Histórico de acessos</p>
