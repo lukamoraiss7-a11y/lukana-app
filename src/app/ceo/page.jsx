@@ -1242,37 +1242,10 @@ export default function CeoPage() {
 
         {activeTab === 'fabrica' && (
           <div className="px-3 py-3">
-            <p className="text-xs text-gray-400 uppercase tracking-wide font-bold mb-3 px-1">Monitoramento de fábrica</p>
-            <DateNav histKey={HIST_FAB_KEY} viewDate={viewFabDate} setViewDate={setViewFabDate} />
-            {viewFabDate !== today() ? (
-              (() => {
-                const hist = loadHist(HIST_FAB_KEY);
-                const old = hist[viewFabDate];
-                if (!old) return <div className="text-center py-12 text-sm text-gray-400">Sem registro para este dia.</div>;
-                return (
-                  <div>
-                    <div className="mb-3 px-1 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 font-semibold text-center">
-                      Visualizando {viewFabDate.split('-').reverse().join('/')} · somente leitura
-                    </div>
-                    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                      {FABRICA_PERGUNTAS.map((q, i) => (
-                        <QuestionItem key={q.id} q={q} status={old.respostas?.[i]?.status || null} text={old.respostas?.[i]?.text || ''} onStatus={() => {}} onText={() => {}} />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()
-            ) : (
-              <div>
-                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                  {FABRICA_PERGUNTAS.map((q, i) => (
-                    <QuestionItem key={q.id} q={q} status={fabricaData?.respostas[i]?.status || null} text={fabricaData?.respostas[i]?.text || ''}
-                      onStatus={(s) => handleFabrica(i,'status',s)} onText={(t) => handleFabrica(i,'text',t)} />
-                  ))}
-                </div>
-                <button onClick={() => { if (confirm('Resetar Fábrica?')) { const hist = loadHist(HIST_FAB_KEY); delete hist[today()]; localStorage.setItem(HIST_FAB_KEY, JSON.stringify(hist)); setFabricaData(initFabrica()); } }} className="mt-3 w-full py-2 text-xs text-gray-400 border border-gray-200 rounded-xl">Resetar</button>
-              </div>
-            )}
+            <p className="text-xs text-gray-400 uppercase tracking-wide font-bold mb-3 px-1">Status da fábrica</p>
+            <div className="space-y-2 text-sm text-gray-500">
+              <p className="text-center py-8">🏭 Status e anotações do Gerente e Coordenadores de Obra serão exibidos aqui</p>
+            </div>
           </div>
         )}
 
