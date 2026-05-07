@@ -886,6 +886,7 @@ export default function CeoPage() {
   const [auth, setAuth] = useState(false);
   const [passInput, setPassInput] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [viewMode, setViewMode] = useState('diretor'); // 'diretor' ou 'acompanhamento' (Ariel)
   const [activeTab, setActiveTab] = useState('meudia');
   const [diaData, setDiaData] = useState(null);
   const [fabricaData, setFabricaData] = useState(null);
@@ -1039,6 +1040,13 @@ export default function CeoPage() {
     finally { setLoadingCnc(false); }
   }, []);
 
+  // Ajustar aba quando viewMode muda
+  useEffect(() => {
+    if (viewMode === 'diretor' && ['meudia', 'fabrica', 'equipe'].includes(activeTab)) {
+      setActiveTab('acompanhamento');
+    }
+  }, [viewMode, activeTab]);
+
   // Sincroniza equipeDate com viewDate quando está no Meu Dia
   useEffect(() => { if (activeTab === 'meudia') setEquipeDate(viewDate); }, [viewDate, activeTab]);
   useEffect(() => { if (auth && (activeTab === 'equipe' || activeTab === 'meudia')) fetchEquipe(equipeDate); }, [auth, activeTab, equipeDate, fetchEquipe]);
@@ -1118,7 +1126,8 @@ export default function CeoPage() {
   // DEBUG: Verificar valor de ceoSession
   console.log('🔍 DEBUG CEO Page - ceoSession:', ceoSession, 'role:', ceoSession?.role, 'é diretor?', ceoSession?.role === 'diretor');
 
-  const TABS = [
+  const ALL_TABS = [
+    { id: 'acompanhamento', label: 'Acompanhamento', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 6h.01M12 16h.01"/></svg> },
     { id: 'meudia',  label: 'Meu Dia', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg> },
     { id: 'fabrica', label: 'Fábrica',  icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M3 9l4-4 4 4 4-4 4 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9z"/></svg> },
     { id: 'equipe',  label: 'Equipe',   icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> },
@@ -1130,6 +1139,11 @@ export default function CeoPage() {
     { id: 'acessos', label: 'Acessos', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg> },
   ];
 
+  // Filtrar TABS baseado em viewMode
+  const TABS = viewMode === 'diretor'
+    ? ALL_TABS.filter(t => !['meudia', 'fabrica', 'equipe'].includes(t.id))
+    : ALL_TABS;
+
   return (
     <div className="min-h-dvh flex flex-col">
       <header className="fixed top-0 left-0 right-0 z-40 h-14 bg-navy flex items-center justify-between px-4 shadow-lg">
@@ -1137,11 +1151,25 @@ export default function CeoPage() {
         <div className="flex items-center gap-2">
           {activeTab === 'meudia' && <span className="text-xs text-gold/80 bg-white/10 px-2.5 py-1 rounded-full">{ans}/{tot}</span>}
           <span className="text-xs text-white/40 px-2 py-1">{dateStr}</span>
+          <select value={viewMode} onChange={(e) => { setViewMode(e.target.value); setActiveTab('acompanhamento'); }}
+            className="text-xs bg-white/10 text-white border border-white/20 rounded px-2 py-1 focus:outline-none focus:border-gold">
+            <option value="diretor">Diretor</option>
+            <option value="acompanhamento">Ariel (Vice)</option>
+          </select>
           <button onClick={handleLogout} className="text-xs text-white/40 hover:text-white/70 px-3 py-1 rounded-lg hover:bg-white/5 transition-all">Sair</button>
         </div>
       </header>
 
       <main className="flex-1 mt-14 mb-16 overflow-y-auto">
+
+        {activeTab === 'acompanhamento' && (
+          <div className="px-3 py-3">
+            <p className="text-xs text-gray-400 uppercase tracking-wide font-bold mb-3 px-1">Acompanhamento de anotações</p>
+            <div className="space-y-2 text-sm text-gray-500">
+              <p className="text-center py-8">📋 Acompanhamento de anotações de Ana, Vini, Matheus e equipe será exibido aqui</p>
+            </div>
+          </div>
+        )}
 
         {activeTab === 'meudia' && (
           <div className="px-3 py-3">
