@@ -17,9 +17,9 @@ const ROLE_SENHAS = {
 };
 
 // Roles sem senha (só nome)
-const ROLES_SEM_SENHA = ['marceneiro', 'montador', 'auxiliar', 'cnc', 'ariel'];
+const ROLES_SEM_SENHA = ['marceneiro', 'montador', 'auxiliar', 'cnc'];
 
-// funcao: 'gerente' | 'marceneiro' | 'montador' | 'auxiliar' | 'cnc' | 'coordenador_obra' | 'coordenador_projetos' | 'encarregado' | 'diretor' | 'ariel'
+// funcao: 'gerente' | 'marceneiro' | 'montador' | 'auxiliar' | 'cnc' | 'coordenador_obra' | 'coordenador_projetos' | 'encarregado' | 'diretor'
 export function authenticate(funcao, senha, nome) {
   if (funcao === 'gerente') {
     return USERS.find((u) => u.login === 'gerente' && u.senha === senha) || null;
