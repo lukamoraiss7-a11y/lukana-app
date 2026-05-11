@@ -1373,7 +1373,7 @@ export default function CeoPage() {
             })}
           </div>
         )}
-        {activeTab === 'atas' && <AtasTab session={auth} readonly={true} />}
+        {activeTab === 'atas' && <AtasTab session={auth} readonly={auth?.role === 'diretor'} />}
 
       </main>
 

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { PARTICIPANTES_REUNIAO } from '@/lib/questions';
 
 const MAX_ANEXO_BYTES = 500 * 1024; // 500 KB
 
@@ -123,40 +122,12 @@ function Field({ label, value }) {
   );
 }
 
-// ── Picker de participantes ─────────────────────────────────────────────────
-function ParticipantesPicker({ selected, onChange }) {
-  const grupos = [...new Set(PARTICIPANTES_REUNIAO.map((p) => p.grupo))];
-  return (
-    <div className="space-y-2">
-      {grupos.map((g) => (
-        <div key={g}>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">{g}</p>
-          <div className="flex flex-wrap gap-1.5">
-            {PARTICIPANTES_REUNIAO.filter((p) => p.grupo === g).map((p) => {
-              const sel = selected.includes(p.nome);
-              return (
-                <button
-                  key={p.nome}
-                  type="button"
-                  onClick={() => onChange(sel ? selected.filter((n) => n !== p.nome) : [...selected, p.nome])}
-                  className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${sel ? 'border-navy bg-navy text-white' : 'border-gray-200 bg-white text-gray-600'}`}
-                >
-                  {p.nome}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ── Formulário nova ata ─────────────────────────────────────────────────────
 function AtaForm({ session, onSaved }) {
   const today = () => new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
     data_reuniao: today(),
+    participantes: '',
     resumo: '',
     problemas: '',
     decisoes: '',
@@ -165,7 +136,6 @@ function AtaForm({ session, onSaved }) {
     responsaveis: '',
     prazo_acoes: '',
   });
-  const [participantes, setParticipantes] = useState([]);
   const [anexo, setAnexo] = useState(null); // { nome, tipo, tamanho, dados_b64 }
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -187,12 +157,8 @@ function AtaForm({ session, onSaved }) {
   };
 
   const handleSubmit = async () => {
-    if (participantes.length === 0) {
-      setError('Selecione ao menos um participante.');
-      return;
-    }
-    if (!form.resumo.trim()) {
-      setError('Resumo é obrigatório.');
+    if (!form.participantes.trim() || !form.resumo.trim()) {
+      setError('Participantes e Resumo são obrigatórios.');
       return;
     }
     setSaving(true);
@@ -204,7 +170,6 @@ function AtaForm({ session, onSaved }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
-          participantes: participantes.join(', '),
           autor: session.nome,
           role: session.role,
           equipe,
@@ -242,13 +207,8 @@ function AtaForm({ session, onSaved }) {
       </div>
 
       <div>
-        <p className="text-[11px] text-gray-500 mb-1">
-          Participantes <span className="text-red-400">*</span>
-          {participantes.length > 0 && (
-            <span className="ml-2 text-navy font-bold">({participantes.length} selecionados)</span>
-          )}
-        </p>
-        <ParticipantesPicker selected={participantes} onChange={setParticipantes} />
+        <p className="text-[11px] text-gray-500 mb-1">Participantes <span className="text-red-400">*</span></p>
+        {ta('participantes', 'Ex: Ana, Matheus, Luciano...', 2)}
       </div>
 
       <div>
