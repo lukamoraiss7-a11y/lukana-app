@@ -14,7 +14,7 @@ const ROLE_SENHAS = {
   coordenador_obra:     process.env.NEXT_PUBLIC_COORD_OBRA_PASS || 'coordvinny',
   coordenador_projetos: process.env.NEXT_PUBLIC_COORD_PROJ_PASS || 'coordana',
   encarregado:          process.env.NEXT_PUBLIC_ENC_PASS        || 'enc645',
-  ariel:                process.env.NEXT_PUBLIC_ARIEL_PASS      || 'lknariel',
+  ariel:                process.env.NEXT_PUBLIC_ARIEL_PASS      || 'ariellkn',
 };
 
 // Roles sem senha (só nome)
