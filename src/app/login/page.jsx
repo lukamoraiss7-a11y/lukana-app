@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authenticate, setSession, getSession } from '@/lib/auth';
 import Link from 'next/link';
-import { Suspense } from 'react';
 
 const ROLE_CONFIG = {
   gerente:              { dest: '/gerente'       },
@@ -254,9 +253,15 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
-  return (
-    <Suspense fallback={<div className="min-h-dvh flex items-center justify-center bg-navy" />}>
-      <LoginForm />
-    </Suspense>
-  );
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div className="min-h-dvh flex items-center justify-center bg-navy" />;
+  }
+
+  return <LoginForm />;
 }
