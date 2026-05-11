@@ -141,6 +141,29 @@ export const AMBIENTES_LISTA = [
   'Rouparia', 'Depósito', 'Garagem', 'Sótão / Porão', 'Escada (vão inferior)',
 ];
 
+// ── Participantes de reunião (lista completa de funcionários) ──────────────
+export const PARTICIPANTES_REUNIAO = [
+  // Diretoria / Gestão
+  { nome: 'Luka',    grupo: 'Diretoria' },
+  { nome: 'Matheus', grupo: 'Fábrica' },
+  { nome: 'Ana',     grupo: 'Obra' },
+  { nome: 'Vinni',   grupo: 'Obra' },
+  { nome: 'Luciano', grupo: 'Fábrica' },
+  // Fábrica
+  { nome: 'Rodrigo',  grupo: 'Fábrica' },
+  { nome: 'Edmilson', grupo: 'Fábrica' },
+  { nome: 'João',     grupo: 'Fábrica' },
+  { nome: 'Victor',   grupo: 'Fábrica' },
+  // Equipes de Obra
+  { nome: 'Nil',     grupo: 'Obra' },
+  { nome: 'Gomes',   grupo: 'Obra' },
+  { nome: 'Luiz',    grupo: 'Obra' },
+  { nome: 'Kauã',    grupo: 'Obra' },
+  { nome: 'Ivan',    grupo: 'Obra' },
+  { nome: 'José',    grupo: 'Obra' },
+  { nome: 'Eduardo', grupo: 'Obra' },
+];
+
 // ── Equipes de obra (instalação em campo) ──────────────────────────────────
 export const EQUIPES_OBRA = [
   'Equipe 01 - Nil',
