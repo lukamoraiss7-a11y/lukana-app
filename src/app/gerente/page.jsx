@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getSession, clearSession } from '@/lib/auth';
 import { GERENTE_FABRICA, EQUIPES_OBRA, AMBIENTES_LISTA } from '@/lib/questions';
 import Link from 'next/link';
+import AtasTab from '@/components/AtasTab';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -678,6 +679,7 @@ export default function GerentePage() {
     { id: 'equipe',  label: 'Equipe',   icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> },
     { id: 'pedidos', label: 'Pedidos',  icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4"/></svg> },
     { id: 'registros', label: 'Registros', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> },
+    { id: 'atas', label: 'Atas', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 6h.01M12 16h.01M16 12h.01"/></svg> },
   ];
 
   return (
@@ -787,6 +789,7 @@ export default function GerentePage() {
         )}
 
         {activeTab === 'registros' && <RegistrosTab session={session} obras={obras} />}
+        {activeTab === 'atas' && <AtasTab session={session} />}
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 h-16 bg-navy flex shadow-lg">

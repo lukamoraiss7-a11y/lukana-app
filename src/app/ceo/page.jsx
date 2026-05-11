@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { MEU_DIA_BLOCOS, FABRICA_PERGUNTAS, EQUIPES_OBRA } from '@/lib/questions';
 import { getSession, clearSession } from '@/lib/auth';
+import AtasTab from '@/components/AtasTab';
 
 // DEBUG: Remove password requirement - accept anything
 const CEO_PASS = 'xxxxx';
@@ -1141,6 +1142,7 @@ export default function CeoPage() {
     { id: 'pedidos', label: 'Pedidos',   icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4"/></svg> },
     { id: 'estoque', label: 'Estoque',   icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8l-2 4h12l-2-4z"/><path d="M12 12v4M10 14h4"/></svg> },
     { id: 'acessos', label: 'Acessos', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg> },
+    { id: 'atas',    label: 'Atas',    icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 6h.01M12 16h.01M16 12h.01"/></svg> },
   ];
 
   // Filtrar TABS baseado em viewMode
@@ -1371,6 +1373,8 @@ export default function CeoPage() {
             })}
           </div>
         )}
+        {activeTab === 'atas' && <AtasTab session={auth} readonly={true} />}
+
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 h-16 bg-navy flex overflow-x-auto no-scrollbar shadow-lg">

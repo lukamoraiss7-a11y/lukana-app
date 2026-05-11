@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSession, clearSession } from '@/lib/auth';
 import { COORDENADOR_CHECKLIST, EQUIPES_OBRA, AMBIENTES_LISTA } from '@/lib/questions';
+import AtasTab from '@/components/AtasTab';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -251,7 +252,7 @@ function CadernoTab({ obras, session }) {
       <div className="sticky bottom-20 pt-2">
         {saved && <p className="text-green-600 text-xs text-center mb-2 font-bold">Caderno salvo!</p>}
         <button onClick={handleSave} disabled={!canSave || saving}
-          className={`w-full py-3.5 rounded-2xl font-bold text-sm transition-all ${canSave && !saving ? 'bg-gold text-navy active:opacity-80' : 'bg-gray-200 text-gray-400'}`}>
+          className={`w-full py-3.5 rounded-2xl font-bold text-sm transition-colors ${canSave && !saving ? 'bg-gold text-navy active:opacity-80' : 'bg-gray-200 text-gray-400'}`}>
           {saving ? 'Salvando...' : 'Salvar Caderno de Venda'}
         </button>
       </div>
@@ -428,15 +429,15 @@ function TermoTab({ obras, session }) {
         <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Resultado *</p>
         <div className="grid grid-cols-3 gap-2">
           <button onClick={() => setTipoAceite('total')}
-            className={`py-3 rounded-xl text-xs font-bold border-2 transition-all ${tipoAceite === 'total' ? 'border-green-400 bg-green-50 text-green-600' : 'border-gray-200 bg-white text-gray-400'}`}>
+            className={`py-3 rounded-xl text-xs font-bold border-2 transition-colors ${tipoAceite === 'total' ? 'border-green-400 bg-green-50 text-green-600' : 'border-gray-200 bg-white text-gray-400'}`}>
             Aceite Total
           </button>
           <button onClick={() => setTipoAceite('ressalva')}
-            className={`py-3 rounded-xl text-xs font-bold border-2 transition-all ${tipoAceite === 'ressalva' ? 'border-amber-400 bg-amber-50 text-amber-600' : 'border-gray-200 bg-white text-gray-400'}`}>
+            className={`py-3 rounded-xl text-xs font-bold border-2 transition-colors ${tipoAceite === 'ressalva' ? 'border-amber-400 bg-amber-50 text-amber-600' : 'border-gray-200 bg-white text-gray-400'}`}>
             Com Ressalva
           </button>
           <button onClick={() => setTipoAceite('recusa')}
-            className={`py-3 rounded-xl text-xs font-bold border-2 transition-all ${tipoAceite === 'recusa' ? 'border-red-400 bg-red-50 text-red-600' : 'border-gray-200 bg-white text-gray-400'}`}>
+            className={`py-3 rounded-xl text-xs font-bold border-2 transition-colors ${tipoAceite === 'recusa' ? 'border-red-400 bg-red-50 text-red-600' : 'border-gray-200 bg-white text-gray-400'}`}>
             Recusa
           </button>
         </div>
@@ -519,7 +520,7 @@ function RegistrosTab({ session }) {
         <div className="flex gap-2 mb-2">
           {[{v:'obra',l:'Obra'},{v:'fabrica',l:'Fábrica'},{v:'nota',l:'Geral'}].map((t) => (
             <button key={t.v} onClick={() => setTipo(t.v)}
-              className={`flex-1 py-1.5 rounded-lg border-2 text-xs font-bold transition-all ${tipo === t.v ? 'border-navy bg-navy text-white' : 'border-gray-200 bg-gray-50 text-gray-400'}`}>
+              className={`flex-1 py-1.5 rounded-lg border-2 text-xs font-bold transition-colors ${tipo === t.v ? 'border-navy bg-navy text-white' : 'border-gray-200 bg-gray-50 text-gray-400'}`}>
               {t.l}
             </button>
           ))}
@@ -535,7 +536,7 @@ function RegistrosTab({ session }) {
       <div className="flex gap-2 mb-3">
         {[{v:'hoje',l:'Hoje'},{v:'semana',l:'Semana'},{v:'mes',l:'Mês'}].map((f) => (
           <button key={f.v} onClick={() => setFilter(f.v)}
-            className={`flex-1 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${filter === f.v ? 'border-navy bg-navy text-white' : 'border-gray-200 bg-white text-gray-500'}`}>
+            className={`flex-1 py-1.5 rounded-full text-xs font-bold border-2 transition-colors ${filter === f.v ? 'border-navy bg-navy text-white' : 'border-gray-200 bg-white text-gray-500'}`}>
             {f.l}
           </button>
         ))}
@@ -554,6 +555,46 @@ function RegistrosTab({ session }) {
     </div>
   );
 }
+
+// ── Ambient picker — memoized to avoid re-creating 25 closures on every keystroke ──
+const AmbientesPicker = memo(function AmbientesPicker({ selected, onChange }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {AMBIENTES_LISTA.map((a) => {
+        const sel = selected.includes(a);
+        return (
+          <button key={a} type="button"
+            onClick={() => onChange((prev) => sel ? prev.filter((x) => x !== a) : [...prev, a])}
+            className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${sel ? 'border-gold bg-gold/10 text-navy' : 'border-gray-200 bg-white text-gray-500'}`}>
+            {a}
+          </button>
+        );
+      })}
+      <button type="button"
+        onClick={() => onChange((prev) => prev.includes('__outro__') ? prev.filter((x) => x !== '__outro__') : [...prev, '__outro__'])}
+        className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${selected.includes('__outro__') ? 'border-gold bg-gold/10 text-navy' : 'border-gray-200 bg-white text-gray-500'}`}>
+        Outro
+      </button>
+    </div>
+  );
+});
+
+// ── Checklist — memoized to avoid re-creating 8 closures on every keystroke ──
+const CoordChecklist = memo(function CoordChecklist({ checklist, setChecklist }) {
+  return (
+    <div className="space-y-1 mb-3">
+      {COORDENADOR_CHECKLIST.map((item) => (
+        <button key={item} onClick={() => setChecklist((c) => ({ ...c, [item]: !c[item] }))}
+          className="w-full flex items-center gap-3 text-left py-2 px-1">
+          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${checklist[item] ? 'border-green-500 bg-green-500' : 'border-gray-300'}`}>
+            {checklist[item] && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>}
+          </div>
+          <span className={`text-sm transition-colors ${checklist[item] ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{item}</span>
+        </button>
+      ))}
+    </div>
+  );
+});
 
 // ── PÁGINA PRINCIPAL ───────────────────────────────────────────────────────
 export default function CoordenadoresPage() {
@@ -726,30 +767,32 @@ export default function CoordenadoresPage() {
   };
 
   // Timeline
-  const buildTimeline = () => {
+  const timeline = useMemo(() => {
     const items = [];
     notas.forEach((n) => items.push({ time: n.created_at, type: 'nota', data: n }));
     submissions.forEach((s) => { if (s.submitted_at) items.push({ time: s.submitted_at, type: 'equipe', data: s }); });
     cncEntries.forEach((c) => { if (c.created_at) items.push({ time: c.created_at, type: 'cnc', data: c }); });
-    pedidos.filter((p) => p.date === today()).forEach((p) => { if (p.created_at) items.push({ time: p.created_at, type: 'pedido', data: p }); });
+    const todayStr = today();
+    pedidos.filter((p) => p.date === todayStr).forEach((p) => { if (p.created_at) items.push({ time: p.created_at, type: 'pedido', data: p }); });
     return items.sort((a, b) => (b.time || '').localeCompare(a.time || ''));
-  };
-
-  const timeline = buildTimeline();
+  }, [notas, submissions, cncEntries, pedidos]);
 
   const dateStr = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' }).replace(',', '');
 
   if (!mounted || !session) return null;
 
   const isProj = session?.role === 'coordenador_projetos';
+  const ATA_TAB = { id: 'atas', label: 'Atas', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 6h.01M12 16h.01M16 12h.01"/></svg> };
   const TABS = isProj ? [
     { id: 'caderno', label: 'Caderno', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4"/></svg> },
     { id: 'termo',   label: 'Termo',   icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 12l2 2 4-4M7 7H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-2M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg> },
+    ATA_TAB,
   ] : [
     { id: 'diario',      label: 'Diário',      icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> },
     { id: 'suprimentos', label: 'Suprimentos', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4"/></svg> },
     { id: 'equipe',      label: 'Equipe',      icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> },
     { id: 'termo',       label: 'Termo',       icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 12l2 2 4-4M7 7H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-2M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg> },
+    ATA_TAB,
   ];
 
   return (
@@ -765,7 +808,7 @@ export default function CoordenadoresPage() {
         </div>
       </header>
 
-      <main className="flex-1 mt-14 mb-16 overflow-y-auto">
+      <main className="flex-1 mt-14 mb-16 overflow-y-auto [will-change:transform]">
 
         {/* ── DIÁRIO ── */}
         {activeTab === 'diario' && (
@@ -789,38 +832,14 @@ export default function CoordenadoresPage() {
                   {obras.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
                 </select>
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide pt-1">Ambiente(s)</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {AMBIENTES_LISTA.map((a) => {
-                    const sel = ambientesVistoria.includes(a);
-                    return (
-                      <button key={a} type="button" onClick={() => setAmbientesVistoria((prev) => sel ? prev.filter((x) => x !== a) : [...prev, a])}
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${sel ? 'border-gold bg-gold/10 text-navy' : 'border-gray-200 bg-white text-gray-500'}`}>
-                        {a}
-                      </button>
-                    );
-                  })}
-                  <button type="button" onClick={() => setAmbientesVistoria((prev) => prev.includes('__outro__') ? prev.filter((x) => x !== '__outro__') : [...prev, '__outro__'])}
-                    className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${ambientesVistoria.includes('__outro__') ? 'border-gold bg-gold/10 text-navy' : 'border-gray-200 bg-white text-gray-500'}`}>
-                    Outro
-                  </button>
-                </div>
+                <AmbientesPicker selected={ambientesVistoria} onChange={setAmbientesVistoria} />
                 {ambientesVistoria.includes('__outro__') && (
                   <input value={ambienteOutro} onChange={(e) => setAmbienteOutro(e.target.value)}
                     placeholder="Qual ambiente?"
                     className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-gold" />
                 )}
               </div>
-              <div className="space-y-1 mb-3">
-                {COORDENADOR_CHECKLIST.map((item) => (
-                  <button key={item} onClick={() => setChecklist((c) => ({ ...c, [item]: !c[item] }))}
-                    className="w-full flex items-center gap-3 text-left py-2 px-1">
-                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${checklist[item] ? 'border-green-500 bg-green-500' : 'border-gray-300'}`}>
-                      {checklist[item] && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>}
-                    </div>
-                    <span className={`text-sm transition-colors ${checklist[item] ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{item}</span>
-                  </button>
-                ))}
-              </div>
+              <CoordChecklist checklist={checklist} setChecklist={setChecklist} />
               {/* Foto integrada — dois botões */}
               <div className="flex gap-2 mb-1">
                 <label className="flex-1 flex items-center justify-center gap-1.5 border-2 border-dashed rounded-xl px-2 py-3 text-xs font-semibold cursor-pointer text-gray-400 border-gray-200">
@@ -857,7 +876,7 @@ export default function CoordenadoresPage() {
               <div className="flex gap-2 mb-2">
                 {[{v:'nota',l:'Geral'},{v:'obra',l:'Obra'},{v:'fabrica',l:'Fábrica'}].map((t) => (
                   <button key={t.v} onClick={() => setTipo(t.v)}
-                    className={`flex-1 py-1.5 rounded-lg border-2 text-xs font-bold transition-all ${tipo === t.v ? 'border-navy bg-navy text-white' : 'border-gray-200 bg-gray-50 text-gray-400'}`}>
+                    className={`flex-1 py-1.5 rounded-lg border-2 text-xs font-bold transition-colors ${tipo === t.v ? 'border-navy bg-navy text-white' : 'border-gray-200 bg-gray-50 text-gray-400'}`}>
                     {t.l}
                   </button>
                 ))}
@@ -951,7 +970,7 @@ export default function CoordenadoresPage() {
                     <button
                       onClick={() => handleToggleAprovada(o.id, o.aprovada)}
                       disabled={aprovandoObra === o.id}
-                      className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-bold border-2 transition-all disabled:opacity-40 ${o.aprovada ? 'border-green-400 bg-green-50 text-green-600' : 'border-gray-200 bg-gray-50 text-gray-400'}`}>
+                      className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-bold border-2 transition-colors disabled:opacity-40 ${o.aprovada ? 'border-green-400 bg-green-50 text-green-600' : 'border-gray-200 bg-gray-50 text-gray-400'}`}>
                       {aprovandoObra === o.id ? '...' : o.aprovada ? 'Liberada ✓' : 'Liberar'}
                     </button>
                   </div>
@@ -987,7 +1006,7 @@ export default function CoordenadoresPage() {
                       const sel = escalarEquipe.includes(eq);
                       return (
                         <button key={eq} onClick={() => setEscalarEquipe((prev) => sel ? prev.filter((x) => x !== eq) : [...prev, eq])}
-                          className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${sel ? 'border-navy bg-navy text-gold' : 'border-gray-200 bg-white text-gray-500'}`}>
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-colors ${sel ? 'border-navy bg-navy text-gold' : 'border-gray-200 bg-white text-gray-500'}`}>
                           {eq}
                         </button>
                       );
@@ -1027,6 +1046,7 @@ export default function CoordenadoresPage() {
 
         {activeTab === 'caderno' && <CadernoTab obras={obras} session={session} />}
         {activeTab === 'termo' && <TermoTab obras={obras} session={session} />}
+        {activeTab === 'atas' && <AtasTab session={session} />}
 
       </main>
 

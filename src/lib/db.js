@@ -188,6 +188,45 @@ export async function getNotas(date) {
   return items.map((v) => (typeof v === 'string' ? JSON.parse(v) : v));
 }
 
+// ── Atas de Reunião ────────────────────────────────────────────────────────
+export async function addAta(ata) {
+  const ym = ata.data_reuniao.slice(0, 7);
+  const k = `atas:month:${ym}`;
+  await redis.hset(k, { [ata.id]: JSON.stringify(ata) });
+  await redis.expire(k, 60 * 60 * 24 * 365);
+}
+
+export async function getAtas(startDate, endDate) {
+  const months = [];
+  const cur = new Date(startDate.slice(0, 7) + '-01T12:00:00Z');
+  const endYM = endDate.slice(0, 7);
+  while (cur.toISOString().slice(0, 7) <= endYM) {
+    months.push(cur.toISOString().slice(0, 7));
+    cur.setMonth(cur.getMonth() + 1);
+  }
+  const results = [];
+  for (const ym of months) {
+    const hash = await redis.hgetall(`atas:month:${ym}`);
+    if (hash) {
+      results.push(...Object.values(hash).map((v) => (typeof v === 'string' ? JSON.parse(v) : v)));
+    }
+  }
+  return results
+    .filter((a) => a.data_reuniao >= startDate && a.data_reuniao <= endDate)
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+}
+
+export async function updateAta(id, dataReuniao, updates) {
+  const ym = dataReuniao.slice(0, 7);
+  const k = `atas:month:${ym}`;
+  const current = await redis.hget(k, id);
+  if (!current) return false;
+  const ata = typeof current === 'string' ? JSON.parse(current) : current;
+  const updated = { ...ata, ...updates, updated_at: new Date().toISOString() };
+  await redis.hset(k, { [id]: JSON.stringify(updated) });
+  return true;
+}
+
 // ── Histórico de logins ────────────────────────────────────────────────────
 export async function addLoginEvent(event) {
   await redis.lpush('login:history', JSON.stringify(event));
