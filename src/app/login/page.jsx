@@ -216,17 +216,13 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const nextUrl   = searchParams.get('next') || '/';
   const roleParam = searchParams.get('role') || '';
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const session = getSession();
     if (session) {
       router.replace(nextUrl !== '/' ? nextUrl : (ROLE_CONFIG[session.role]?.dest || '/'));
     }
   }, [router, nextUrl]);
-
-  if (!mounted) return null;
 
   const onSuccess = (user) => {
     setSession(user);
