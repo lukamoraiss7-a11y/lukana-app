@@ -213,8 +213,17 @@ const CONTEXT_LABELS = {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextUrl   = searchParams.get('next') || '/';
-  const roleParam = searchParams.get('role') || '';
+  const [nextUrl, setNextUrl] = useState('/');
+  const [roleParam, setRoleParam] = useState('');
+
+  useEffect(() => {
+    try {
+      setNextUrl(searchParams.get('next') || '/');
+      setRoleParam(searchParams.get('role') || '');
+    } catch (e) {
+      console.error('Error getting search params:', e);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const session = getSession();
