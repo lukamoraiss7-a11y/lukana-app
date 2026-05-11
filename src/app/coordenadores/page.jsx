@@ -662,6 +662,7 @@ export default function CoordenadoresPage() {
   const [resumo, setResumo]   = useState('');
   const [texto, setTexto]     = useState('');
   const [tipo, setTipo]       = useState('nota');
+  const [obraNota, setObraNota] = useState(''); // Obra selecionada para notas
   const [checklist, setChecklist] = useState({});
   const [obraVistoria, setObraVistoria] = useState('');
   const [ambientesVistoria, setAmbientesVistoria] = useState([]);
@@ -711,15 +712,21 @@ export default function CoordenadoresPage() {
 
   const handleAddNota = async () => {
     if (!texto.trim()) return;
+    if (!obraNota?.trim()) {
+      showToast('Selecione a obra antes de registrar');
+      return;
+    }
     setSaving(true);
     try {
-      await fetch('/api/notas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ autor: session.nome, texto, tipo }) });
+      const obraObj = obras.find(o => o.id === obraNota);
+      await fetch('/api/notas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ autor: session.nome, texto, tipo, obra_id: obraNota, obra_nome: obraObj?.nome, role: session?.role }) });
       setTexto('');
+      setObraNota('');
       const r = await fetch(`/api/notas?date=${today()}`);
       const n = await r.json();
       setNotas(Array.isArray(n) ? n : []);
       showToast('Nota registrada');
-    } catch { showToast('Erro ao salvar'); }
+    } catch (err) { showToast('Erro ao salvar'); }
     setSaving(false);
   };
 
@@ -881,10 +888,15 @@ export default function CoordenadoresPage() {
                   </button>
                 ))}
               </div>
+              <select value={obraNota} onChange={(e) => setObraNota(e.target.value)}
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gold mb-3 text-gray-700">
+                <option value="">— Selecione a obra —</option>
+                {obras.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
+              </select>
               <textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={2}
                 placeholder="O que aconteceu? Bloqueio, evolução, observação..."
                 className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-gold placeholder:text-gray-300 mb-3" />
-              <button onClick={handleAddNota} disabled={saving}
+              <button onClick={handleAddNota} disabled={saving || !obraNota}
                 className="w-full py-2.5 bg-gold text-navy font-bold rounded-xl text-sm disabled:opacity-50">
                 {saving ? 'Salvando...' : 'Registrar nota'}
               </button>

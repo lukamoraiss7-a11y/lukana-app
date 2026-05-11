@@ -17,12 +17,19 @@ export async function POST(request) {
     if (!data.texto?.trim() || !data.autor) {
       return NextResponse.json({ error: 'texto e autor obrigatórios' }, { status: 400 });
     }
+    // Validar que obra_id foi informado para coordenador/gerente
+    const isCoordOrGerente = data.role === 'coordenador_obra' || data.role === 'coordenador_projetos' || data.role === 'gerente';
+    if (isCoordOrGerente && !data.obra_id?.trim()) {
+      return NextResponse.json({ error: 'Selecione a obra antes de registrar' }, { status: 400 });
+    }
     const date = new Date().toISOString().slice(0, 10);
     await addNota({
       id: Date.now().toString(),
       autor: data.autor,
       texto: data.texto.trim(),
       tipo: data.tipo || 'nota',
+      obra_id: data.obra_id || null,
+      obra_nome: data.obra_nome || null,
       date,
       created_at: new Date().toISOString(),
     });

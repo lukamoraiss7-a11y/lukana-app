@@ -417,6 +417,7 @@ function RegistrosTab({ session, obras }) {
   const [sugestoes, setSugestoes] = useState([]);
   const [texto, setTexto]         = useState('');
   const [tipo, setTipo]           = useState('fabrica');
+  const [obraRegistro, setObraRegistro] = useState(''); // Obra selecionada para registros
   const [saving, setSaving]       = useState(false);
   const [obraFotoId, setObraFotoId] = useState('');
   const [fotoFile, setFotoFile]     = useState(null);
@@ -451,14 +452,20 @@ function RegistrosTab({ session, obras }) {
 
   const handleAdd = async () => {
     if (!texto.trim()) return;
+    if (!obraRegistro?.trim()) {
+      showToast('Selecione a obra antes de registrar');
+      return;
+    }
     setSaving(true);
     try {
-      await fetch('/api/registros', {
+      const obraObj = obras.find(o => o.id === obraRegistro);
+      await fetch('/api/notas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ autor: session.nome, role: session.role, texto, tipo }),
+        body: JSON.stringify({ autor: session.nome, role: session.role, texto, tipo, obra_id: obraRegistro, obra_nome: obraObj?.nome }),
       });
       setTexto('');
+      setObraRegistro('');
       fetchRegistros();
     } catch {}
     setSaving(false);
@@ -494,10 +501,15 @@ function RegistrosTab({ session, obras }) {
             </button>
           ))}
         </div>
+        <select value={obraRegistro} onChange={(e) => setObraRegistro(e.target.value)}
+          className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gold mb-3 text-gray-700">
+          <option value="">— Selecione a obra —</option>
+          {obras.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
+        </select>
         <textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={3}
           placeholder="O que aconteceu? Evolução, bloqueio, decisão tomada..."
           className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-gold placeholder:text-gray-300 mb-3" />
-        <button onClick={handleAdd} disabled={saving || !texto.trim()}
+        <button onClick={handleAdd} disabled={saving || !texto.trim() || !obraRegistro}
           className="w-full py-2.5 bg-gold text-navy font-bold rounded-xl text-sm disabled:opacity-50">
           {saving ? 'Salvando...' : 'Registrar'}
         </button>

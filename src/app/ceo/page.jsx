@@ -908,6 +908,7 @@ export default function CeoPage() {
   const [toast, setToast] = useState('');
   const [loginHistory, setLoginHistory] = useState([]);
   const [loadingAcessos, setLoadingAcessos] = useState(false);
+  const [notas, setNotas] = useState([]);
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2000); };
 
   const handleLogout = () => {
@@ -972,10 +973,18 @@ export default function CeoPage() {
     finally { setLoadingObras(false); }
   }, []);
 
-  const loadAll = useCallback(() => {
+  const loadAll = useCallback(async () => {
     setDiaData(initDia());
     setFabricaData(initFabrica());
     fetchObras();
+    // Carregar notas de hoje
+    try {
+      const r = await fetch(`/api/notas?date=${today()}`);
+      const d = await r.json();
+      setNotas(Array.isArray(d) ? d : []);
+    } catch {
+      setNotas([]);
+    }
   }, [initDia, initFabrica, fetchObras]);
 
   const handleAuth = () => {
@@ -1166,9 +1175,35 @@ export default function CeoPage() {
         {activeTab === 'acompanhamento' && (
           <div className="px-3 py-3">
             <p className="text-xs text-gray-400 uppercase tracking-wide font-bold mb-3 px-1">Acompanhamento de anotações</p>
-            <div className="space-y-2 text-sm text-gray-500">
-              <p className="text-center py-8">📋 Acompanhamento de anotações de Ana, Vini, Matheus e equipe será exibido aqui</p>
-            </div>
+            {notas.length === 0 ? (
+              <div className="space-y-2 text-sm text-gray-500">
+                <p className="text-center py-8">📋 Nenhuma anotação registrada hoje ainda</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {notas.map((nota) => {
+                  const tipoColor = nota.tipo === 'obra' ? 'border-l-4 border-gold bg-gold/5'
+                    : nota.tipo === 'fabrica' ? 'border-l-4 border-blue-300 bg-blue-50/40'
+                    : 'border-l-4 border-gray-200 bg-white';
+                  const tipoLabel = nota.tipo === 'obra' ? '🏗️ Obra'
+                    : nota.tipo === 'fabrica' ? '🏭 Fábrica'
+                    : '📝 Geral';
+                  return (
+                    <div key={nota.id} className={`rounded-lg shadow-sm px-3 py-2.5 text-sm ${tipoColor}`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-gray-800">{nota.autor}</span>
+                          {nota.obra_nome && <span className="text-xs text-gray-500">· {nota.obra_nome}</span>}
+                        </div>
+                        <span className="text-xs text-gray-400">{nota.created_at?.slice(11,16)}</span>
+                      </div>
+                      <span className="inline-block text-xs font-bold px-2 py-0.5 rounded mb-1.5 bg-white/50 text-gray-600">{tipoLabel}</span>
+                      <p className="text-gray-700 leading-snug">{nota.texto}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
