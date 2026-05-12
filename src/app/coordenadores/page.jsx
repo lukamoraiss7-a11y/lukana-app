@@ -172,6 +172,311 @@ function PedidoCoordCard({ pedido, onStatusChange }) {
   );
 }
 
+// ── Caderno Técnico (Coord. Projetos) ─────────────────────────────────────
+const CT_RESPONSAVEIS = ['Ana', 'Aline', 'Munyke', 'Mariana', 'Letícia'];
+const CT_STATUS_CFG = {
+  em_execucao:     { label: 'Em Execução',        badge: 'bg-blue-100 text-blue-700',       bar: 'bg-blue-500' },
+  concluido:       { label: 'Concluído',           badge: 'bg-green-100 text-green-700',     bar: 'bg-green-500' },
+  em_apresentacao: { label: 'Em Apresentação',     badge: 'bg-purple-100 text-purple-700',   bar: 'bg-purple-500' },
+  aprovado:        { label: 'Aprovado',             badge: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-500' },
+  reprovado:       { label: 'Reprovado',            badge: 'bg-red-100 text-red-600',         bar: 'bg-red-500' },
+};
+
+function CadernoTecnicoTab({ obras }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filtroStatus, setFiltroStatus] = useState('todos');
+  const [filtroResp, setFiltroResp] = useState('todos');
+  const [editId, setEditId] = useState(null);
+  const [editData, setEditData] = useState({});
+  const [saving, setSaving] = useState(null);
+  const [reprovObs, setReprovObs] = useState({});
+  const [enviando, setEnviando] = useState(null);
+  const [showEnviar, setShowEnviar] = useState(false);
+  const [cadernoIds, setCadernoIds] = useState(new Set());
+
+  const fetchItems = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/caderno');
+      const d = await r.json();
+      const arr = Array.isArray(d) ? d : [];
+      setItems(arr);
+      setCadernoIds(new Set(arr.map(i => i.id)));
+    } catch { setItems([]); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchItems(); }, []);
+
+  const patchItem = async (id, updates, obs_historico = '') => {
+    setSaving(id);
+    try {
+      await fetch('/api/caderno', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, obs_historico, ...updates }),
+      });
+      setItems(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i));
+      setEditId(null);
+    } finally { setSaving(null); }
+  };
+
+  const saveEdit = async (item) => {
+    const ed = editData[item.id] || {};
+    await patchItem(item.id, ed);
+  };
+
+  const removeItem = async (id) => {
+    if (!confirm('Remover do Caderno Técnico?')) return;
+    setSaving(id);
+    try {
+      await fetch('/api/caderno', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+      setItems(prev => prev.filter(i => i.id !== id));
+      setCadernoIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+    } finally { setSaving(null); }
+  };
+
+  const enviarParaCaderno = async (obra) => {
+    setEnviando(obra.id);
+    try {
+      const r = await fetch('/api/caderno', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: obra.id, nome: obra.nome, ambientes: obra.ambientes, prazo: obra.prazo }),
+      });
+      if (r.ok) {
+        await fetchItems();
+        setShowEnviar(false);
+      }
+    } finally { setEnviando(null); }
+  };
+
+  const filtered = items.filter(i => {
+    if (filtroStatus !== 'todos' && i.status !== filtroStatus) return false;
+    if (filtroResp !== 'todos' && !(i.responsaveis || []).includes(filtroResp)) return false;
+    return true;
+  });
+
+  if (loading) return <div className="text-center py-12 text-sm text-gray-400">Carregando...</div>;
+
+  return (
+    <div className="flex-1 overflow-y-auto pb-24 p-3">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-gray-400 uppercase tracking-wide font-bold">{items.length} projeto{items.length !== 1 ? 's' : ''}</p>
+        <button onClick={() => setShowEnviar(v => !v)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-gold text-navy">
+          <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Adicionar projeto
+        </button>
+      </div>
+
+      {/* Painel adicionar */}
+      {showEnviar && (
+        <div className="bg-white rounded-xl shadow-sm mb-3 p-4">
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Projetos fechados disponíveis</p>
+          {obras.filter(o => !cadernoIds.has(o.id)).length === 0 && (
+            <p className="text-sm text-gray-400 text-center py-3">Todos os projetos já estão no Caderno Técnico.</p>
+          )}
+          {obras.filter(o => !cadernoIds.has(o.id)).map(obra => (
+            <div key={obra.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+              <div className="flex-1 min-w-0 pr-3">
+                <p className="text-sm font-semibold text-gray-900 truncate">{obra.nome}</p>
+                {obra.ambientes?.length > 0 && <p className="text-xs text-gray-400">{obra.ambientes.length} amb.</p>}
+              </div>
+              <button onClick={() => enviarParaCaderno(obra)} disabled={enviando === obra.id}
+                className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border-2 border-navy text-navy disabled:opacity-50">
+                {enviando === obra.id ? '...' : 'Adicionar'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Filtros */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar mb-2 pb-0.5">
+        {[{ v: 'todos', l: 'Todos' }, ...Object.entries(CT_STATUS_CFG).map(([v, c]) => ({ v, l: c.label }))].map(f => (
+          <button key={f.v} onClick={() => setFiltroStatus(f.v)}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${filtroStatus === f.v ? 'border-navy bg-navy text-white' : 'border-gray-200 bg-white text-gray-500'}`}>
+            {f.l}
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-2 overflow-x-auto no-scrollbar mb-3 pb-0.5">
+        {[{ v: 'todos', l: 'Todos' }, ...CT_RESPONSAVEIS.map(r => ({ v: r, l: r }))].map(f => (
+          <button key={f.v} onClick={() => setFiltroResp(f.v)}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${filtroResp === f.v ? 'border-gold bg-gold/10 text-gold-d' : 'border-gray-200 bg-white text-gray-500'}`}>
+            {f.l}
+          </button>
+        ))}
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="text-center py-12 text-sm text-gray-400">
+          {items.length === 0 ? 'Nenhum projeto adicionado ainda.' : 'Nenhum projeto com este filtro.'}
+        </div>
+      )}
+
+      {filtered.map(item => {
+        const sc = CT_STATUS_CFG[item.status] || CT_STATUS_CFG.em_execucao;
+        const isEditing = editId === item.id;
+        const isSaving = saving === item.id;
+        const ed = editData[item.id] || {};
+        const responsaveis = ed.responsaveis ?? item.responsaveis ?? [];
+
+        return (
+          <div key={item.id} className="bg-white rounded-xl shadow-sm mb-3 overflow-hidden">
+            <div className="flex items-stretch">
+              <div className={`w-1.5 flex-shrink-0 ${sc.bar}`} />
+              <div className="flex-1 px-4 py-3 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-[15px] text-gray-900 leading-tight truncate">{item.nome}</p>
+                    <div className="flex items-center flex-wrap gap-1.5 mt-1">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${sc.badge}`}>{sc.label}</span>
+                      {item.ambientes?.length > 0 && <span className="text-[10px] text-gray-400">{item.ambientes.length} amb.</span>}
+                    </div>
+                  </div>
+                  <button onClick={() => { setEditId(isEditing ? null : item.id); if (!isEditing) setEditData(d => ({ ...d, [item.id]: {} })); }}
+                    className="flex-shrink-0 p-1.5 text-gray-300 hover:text-gray-500 transition-colors">
+                    <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="w-4 h-4"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                  </button>
+                </div>
+                {responsaveis.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {responsaveis.map(r => <span key={r} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-navy/10 text-navy">{r}</span>)}
+                  </div>
+                )}
+                <div className="flex gap-3 mt-1.5 text-[11px] text-gray-400 flex-wrap">
+                  {item.data_inicio && <span>Início: {item.data_inicio.split('-').reverse().join('/')}</span>}
+                  {item.prazo && <span>Prazo: {item.prazo.split('-').reverse().join('/')}</span>}
+                </div>
+                {item.observacoes && <p className="text-xs text-gray-500 mt-1.5 leading-snug">{item.observacoes}</p>}
+              </div>
+            </div>
+
+            {isEditing && (
+              <div className="px-4 pb-4 pt-3 border-t border-gray-100 space-y-3">
+                <div>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Responsáveis</p>
+                  <div className="flex flex-wrap gap-2">
+                    {CT_RESPONSAVEIS.map(r => {
+                      const sel = responsaveis.includes(r);
+                      return (
+                        <button key={r} onClick={() => setEditData(d => {
+                          const cur = d[item.id]?.responsaveis ?? item.responsaveis ?? [];
+                          return { ...d, [item.id]: { ...d[item.id], responsaveis: sel ? cur.filter(x => x !== r) : [...cur, r] } };
+                        })} className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${sel ? 'border-navy bg-navy text-gold' : 'border-gray-200 text-gray-500'}`}>
+                          {r}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Prazo</p>
+                  <input type="date" defaultValue={item.prazo || ''}
+                    onChange={e => setEditData(d => ({ ...d, [item.id]: { ...d[item.id], prazo: e.target.value } }))}
+                    className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gold" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Observações</p>
+                  <textarea defaultValue={item.observacoes || ''} rows={2}
+                    onChange={e => setEditData(d => ({ ...d, [item.id]: { ...d[item.id], observacoes: e.target.value } }))}
+                    className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:border-gold" />
+                </div>
+                {item.ambientes?.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Ambientes</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {item.ambientes.map((a, i) => (
+                        <span key={i} className="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-600">{typeof a === 'string' ? a : a.nome}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {item.historico?.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Histórico</p>
+                    <div className="space-y-1">
+                      {[...item.historico].reverse().slice(0, 5).map((h, i) => {
+                        const d = new Date(h.data);
+                        const ds = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                        return (
+                          <div key={i} className="text-[11px] text-gray-500">
+                            <span className="font-semibold">{CT_STATUS_CFG[h.status]?.label || h.status}</span>
+                            <span className="text-gray-400"> · {ds}</span>
+                            {h.obs && <span className="text-gray-400"> — {h.obs}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => saveEdit(item)} disabled={isSaving}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold bg-gold text-navy disabled:opacity-50">
+                    {isSaving ? 'Salvando...' : 'Salvar'}
+                  </button>
+                  <button onClick={() => removeItem(item.id)} disabled={isSaving}
+                    className="px-4 py-2 rounded-xl text-xs font-bold border-2 border-red-200 text-red-400">
+                    Remover
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!isEditing && (
+              <div className="px-4 pb-3 pt-1 flex gap-2 flex-wrap">
+                {item.status === 'em_execucao' && (
+                  <button onClick={() => patchItem(item.id, { status: 'concluido' }, 'Caderno técnico concluído')} disabled={isSaving}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold bg-green-500 text-white disabled:opacity-50">
+                    {isSaving ? '...' : 'Marcar Concluído'}
+                  </button>
+                )}
+                {item.status === 'concluido' && (
+                  <button onClick={() => patchItem(item.id, { status: 'em_apresentacao' }, 'Enviado para apresentação')} disabled={isSaving}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold bg-purple-500 text-white disabled:opacity-50">
+                    {isSaving ? '...' : 'Enviar para Apresentação'}
+                  </button>
+                )}
+                {item.status === 'em_apresentacao' && (
+                  <>
+                    <button onClick={() => patchItem(item.id, { status: 'aprovado' }, 'Aprovado pelo cliente')} disabled={isSaving}
+                      className="flex-1 py-2 rounded-xl text-xs font-bold bg-emerald-500 text-white disabled:opacity-50">
+                      {isSaving ? '...' : 'Aprovado'}
+                    </button>
+                    <div className="w-full flex gap-2">
+                      <input value={reprovObs[item.id] || ''} onChange={e => setReprovObs(r => ({ ...r, [item.id]: e.target.value }))}
+                        placeholder="Motivo da reprovação..." className="flex-1 border-2 border-red-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-red-400" />
+                      <button onClick={() => patchItem(item.id, { status: 'reprovado' }, reprovObs[item.id] || 'Reprovado pelo cliente')} disabled={isSaving}
+                        className="px-3 py-2 rounded-xl text-xs font-bold border-2 border-red-400 text-red-500 disabled:opacity-50">
+                        Reprovado
+                      </button>
+                    </div>
+                  </>
+                )}
+                {item.status === 'reprovado' && (
+                  <button onClick={() => patchItem(item.id, { status: 'em_execucao' }, 'Retornado após reprovação')} disabled={isSaving}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold bg-blue-500 text-white disabled:opacity-50">
+                    {isSaving ? '...' : 'Retornar para Execução'}
+                  </button>
+                )}
+                {item.status === 'aprovado' && (
+                  <div className="flex-1 text-center py-2 text-xs font-bold text-emerald-600 bg-emerald-50 rounded-xl border border-emerald-200">
+                    Plano de Corte
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Caderno de Venda (Coord. Projetos) ────────────────────────────────────
 const CADERNO_ITENS = [
   { key: 'cor_mdf_principal',    label: 'Cor MDF Principal',         ph: 'Ex: Branco TX 18mm Duratex' },
@@ -792,6 +1097,7 @@ export default function CoordenadoresPage() {
   const ATA_TAB = { id: 'atas', label: 'Atas', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 6h.01M12 16h.01M16 12h.01"/></svg> };
   const TABS = isProj ? [
     { id: 'caderno', label: 'Caderno', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4"/></svg> },
+    { id: 'tecnico', label: 'Técnico', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg> },
     { id: 'termo',   label: 'Termo',   icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 12l2 2 4-4M7 7H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-2M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg> },
     ATA_TAB,
   ] : [
@@ -1057,6 +1363,7 @@ export default function CoordenadoresPage() {
         )}
 
         {activeTab === 'caderno' && <CadernoTab obras={obras} session={session} />}
+        {activeTab === 'tecnico' && <CadernoTecnicoTab obras={obras} />}
         {activeTab === 'termo' && <TermoTab obras={obras} session={session} />}
         {activeTab === 'atas' && <AtasTab session={session} />}
 
