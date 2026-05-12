@@ -479,16 +479,20 @@ function CadernoTecnicoTab({ obras }) {
 
 // ── Caderno de Venda (Coord. Projetos) ────────────────────────────────────
 const CADERNO_ITENS = [
+  { key: 'briefing',             label: 'Briefing do Cliente',       ph: 'O que o cliente quer, expectativas, referências, estilo...', multi: true },
+  { key: 'definicoes_cliente',   label: 'Definições com o Cliente',  ph: 'O que foi decidido em reunião/visita — cor, modelo, dimensão...', multi: true },
   { key: 'cor_mdf_principal',    label: 'Cor MDF Principal',         ph: 'Ex: Branco TX 18mm Duratex' },
   { key: 'cor_mdf_secundaria',   label: 'Cor MDF Secundária',        ph: 'Se houver (ex: Carvalho Naturale)' },
   { key: 'puxador',              label: 'Puxador — Modelo',          ph: 'Ex: Perfil contínuo alumínio 10cm' },
   { key: 'puxador_acabamento',   label: 'Puxador — Acabamento',      ph: 'Ex: Preto fosco / Cromado / Dourado' },
   { key: 'led',                  label: 'LED — Locais',              ph: 'Ex: Rodapé cozinha + interior armário' },
   { key: 'led_tipo',             label: 'LED — Tipo/Temperatura',    ph: 'Ex: 3000K branco quente, fita 5050' },
+  { key: 'gavetas',              label: 'Gavetas',                   ph: 'Ex: Tandembox Blum / corrediça telescópica / altura...' },
+  { key: 'divisorias',           label: 'Divisórias Internas',       ph: 'Ex: Porta-talher MDF / organizador modular / prateleira interna' },
   { key: 'alturas',              label: 'Alturas dos Móveis',        ph: 'Ex: Armário superior 80cm, base 87cm' },
   { key: 'tamponamento',         label: 'Acabamento Tamponamento',   ph: 'Ex: Fita de bordo PVC branco 22mm' },
   { key: 'serralheria',          label: 'Serralheria',               ph: 'Ex: Porta basculante em alumínio preto' },
-  { key: 'obs',                  label: 'Observações do Projeto',    ph: 'Detalhes, exceções, alertas...' },
+  { key: 'obs',                  label: 'Observações do Projeto',    ph: 'Detalhes, exceções, alertas...', multi: true },
 ];
 
 function CadernoTab({ obras, session }) {
@@ -543,12 +547,22 @@ function CadernoTab({ obras, session }) {
           {CADERNO_ITENS.map(item => (
             <div key={item.key} className="px-4 py-3">
               <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">{item.label}</p>
-              <input
-                value={campos[item.key] || ''}
-                onChange={e => set(item.key, e.target.value)}
-                placeholder={item.ph}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gold placeholder:text-gray-300"
-              />
+              {item.multi ? (
+                <textarea
+                  value={campos[item.key] || ''}
+                  onChange={e => set(item.key, e.target.value)}
+                  placeholder={item.ph}
+                  rows={3}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gold placeholder:text-gray-300 resize-none"
+                />
+              ) : (
+                <input
+                  value={campos[item.key] || ''}
+                  onChange={e => set(item.key, e.target.value)}
+                  placeholder={item.ph}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gold placeholder:text-gray-300"
+                />
+              )}
             </div>
           ))}
         </div>
@@ -1097,7 +1111,7 @@ export default function CoordenadoresPage() {
   const ATA_TAB = { id: 'atas', label: 'Atas', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 6h.01M12 16h.01M16 12h.01"/></svg> };
   const TABS = isProj ? [
     { id: 'caderno', label: 'Caderno', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4"/></svg> },
-    { id: 'tecnico', label: 'Técnico', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg> },
+    { id: 'tecnico', label: 'Técnico', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg> },
     { id: 'termo',   label: 'Termo',   icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 12l2 2 4-4M7 7H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-2M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg> },
     ATA_TAB,
   ] : [
