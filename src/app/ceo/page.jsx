@@ -15,6 +15,15 @@ const diasRest = (s) => { if (!s) return ''; const d = Math.round((new Date(s + 
 
 const ROOM_PRESETS = ['Cozinha','Sala','Suíte 1','Suíte 2','Suíte 3','Suíte Master','Gourmet','Banheiro','Lavabo','Escritório','Varanda','Hall','Área de Serviço','Lavanderia','Garagem'];
 
+const CADERNO_RESPONSAVEIS = ['Ana', 'Aline', 'Munyke', 'Mariana', 'Letícia'];
+const CADERNO_STATUS_CFG = {
+  em_execucao:     { label: 'Em Execução',        badge: 'bg-blue-100 text-blue-700',      bar: 'bg-blue-500' },
+  concluido:       { label: 'Concluído',           badge: 'bg-green-100 text-green-700',    bar: 'bg-green-500' },
+  em_apresentacao: { label: 'Em Apresentação',     badge: 'bg-purple-100 text-purple-700',  bar: 'bg-purple-500' },
+  aprovado:        { label: 'Aprovado',             badge: 'bg-emerald-100 text-emerald-700',bar: 'bg-emerald-500' },
+  reprovado:       { label: 'Reprovado',            badge: 'bg-red-100 text-red-600',        bar: 'bg-red-500' },
+};
+
 // ── Botões Sim / Não / Outro ───────────────────────────────────────────────
 function StatusBtns({ value, onChange }) {
   const opts = [
@@ -484,10 +493,271 @@ function PedidoCard({ pedido, onStatusChange }) {
 }
 
 // ── Projetos ───────────────────────────────────────────────────────────────
+// ── Caderno Técnico ────────────────────────────────────────────────────────
+function CadernoTab() {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filtroStatus, setFiltroStatus] = useState('todos');
+  const [filtroResp, setFiltroResp] = useState('todos');
+  const [editId, setEditId] = useState(null);
+  const [editData, setEditData] = useState({});
+  const [saving, setSaving] = useState(null);
+  const [reprovObs, setReprovObs] = useState({});
+
+  const fetchItems = async () => {
+    setLoading(true);
+    try { const r = await fetch('/api/caderno'); const d = await r.json(); setItems(Array.isArray(d) ? d : []); }
+    catch { setItems([]); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchItems(); }, []);
+
+  const patchItem = async (id, updates, obs_historico = '') => {
+    setSaving(id);
+    try {
+      await fetch('/api/caderno', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, obs_historico, ...updates }),
+      });
+      setItems((prev) => prev.map((i) => i.id === id ? { ...i, ...updates } : i));
+      if (updates.status) setEditId(null);
+    } finally { setSaving(null); }
+  };
+
+  const removeItem = async (id) => {
+    if (!confirm('Remover este projeto do Caderno Técnico?')) return;
+    setSaving(id);
+    try {
+      await fetch('/api/caderno', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+      setItems((prev) => prev.filter((i) => i.id !== id));
+    } finally { setSaving(null); }
+  };
+
+  const saveEdit = async (item) => {
+    const ed = editData[item.id] || {};
+    await patchItem(item.id, ed);
+    setEditId(null);
+  };
+
+  const filtered = items.filter((i) => {
+    if (filtroStatus !== 'todos' && i.status !== filtroStatus) return false;
+    if (filtroResp !== 'todos' && !(i.responsaveis || []).includes(filtroResp)) return false;
+    return true;
+  });
+
+  if (loading) return <div className="text-center py-12 text-sm text-gray-400">Carregando...</div>;
+
+  return (
+    <div className="px-3 py-3">
+      {/* Filtro status */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar mb-2 pb-0.5">
+        {[{ v: 'todos', l: 'Todos' }, ...Object.entries(CADERNO_STATUS_CFG).map(([v, c]) => ({ v, l: c.label }))].map((f) => (
+          <button key={f.v} onClick={() => setFiltroStatus(f.v)}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${filtroStatus === f.v ? 'border-navy bg-navy text-white' : 'border-gray-200 bg-white text-gray-500'}`}>
+            {f.l}
+          </button>
+        ))}
+      </div>
+      {/* Filtro responsável */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar mb-3 pb-0.5">
+        {[{ v: 'todos', l: 'Todos' }, ...CADERNO_RESPONSAVEIS.map((r) => ({ v: r, l: r }))].map((f) => (
+          <button key={f.v} onClick={() => setFiltroResp(f.v)}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${filtroResp === f.v ? 'border-gold bg-gold/10 text-gold-d' : 'border-gray-200 bg-white text-gray-500'}`}>
+            {f.l}
+          </button>
+        ))}
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="text-center py-12 text-sm text-gray-400">
+          {items.length === 0 ? 'Nenhum projeto no Caderno Técnico ainda.' : 'Nenhum projeto com este filtro.'}
+        </div>
+      )}
+
+      {filtered.map((item) => {
+        const sc = CADERNO_STATUS_CFG[item.status] || CADERNO_STATUS_CFG.em_execucao;
+        const isEditing = editId === item.id;
+        const isSaving = saving === item.id;
+        const ed = editData[item.id] || {};
+        const responsaveis = ed.responsaveis ?? item.responsaveis ?? [];
+
+        return (
+          <div key={item.id} className="bg-white rounded-xl shadow-sm mb-3 overflow-hidden">
+            {/* Card header */}
+            <div className="flex items-stretch">
+              <div className={`w-1.5 flex-shrink-0 ${sc.bar}`} />
+              <div className="flex-1 px-4 py-3 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-[15px] text-gray-900 leading-tight truncate">{item.nome}</p>
+                    <div className="flex items-center flex-wrap gap-1.5 mt-1">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${sc.badge}`}>{sc.label}</span>
+                      {item.ambientes?.length > 0 && (
+                        <span className="text-[10px] text-gray-400">{item.ambientes.length} amb.</span>
+                      )}
+                    </div>
+                  </div>
+                  <button onClick={() => { setEditId(isEditing ? null : item.id); if (!isEditing) setEditData((d) => ({ ...d, [item.id]: {} })); }}
+                    className="flex-shrink-0 p-1.5 text-gray-300 hover:text-gray-500 transition-colors">
+                    <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="w-4 h-4"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                  </button>
+                </div>
+                {responsaveis.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {responsaveis.map((r) => (
+                      <span key={r} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-navy/10 text-navy">{r}</span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-3 mt-1.5 text-[11px] text-gray-400 flex-wrap">
+                  {item.data_inicio && <span>Início: {item.data_inicio.split('-').reverse().join('/')}</span>}
+                  {item.prazo && <span>Prazo: {item.prazo.split('-').reverse().join('/')}</span>}
+                </div>
+                {item.observacoes && <p className="text-xs text-gray-500 mt-1.5 leading-snug">{item.observacoes}</p>}
+              </div>
+            </div>
+
+            {/* Edit panel */}
+            {isEditing && (
+              <div className="px-4 pb-4 pt-3 border-t border-gray-100 space-y-3">
+                <div>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Responsáveis</p>
+                  <div className="flex flex-wrap gap-2">
+                    {CADERNO_RESPONSAVEIS.map((r) => {
+                      const sel = responsaveis.includes(r);
+                      return (
+                        <button key={r} onClick={() => setEditData((d) => {
+                          const cur = d[item.id]?.responsaveis ?? item.responsaveis ?? [];
+                          return { ...d, [item.id]: { ...d[item.id], responsaveis: sel ? cur.filter((x) => x !== r) : [...cur, r] } };
+                        })}
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${sel ? 'border-navy bg-navy text-gold' : 'border-gray-200 text-gray-500'}`}>
+                          {r}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Prazo</p>
+                  <input type="date" defaultValue={item.prazo || ''}
+                    onChange={(e) => setEditData((d) => ({ ...d, [item.id]: { ...d[item.id], prazo: e.target.value } }))}
+                    className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gold" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Observações</p>
+                  <textarea defaultValue={item.observacoes || ''} rows={2}
+                    onChange={(e) => setEditData((d) => ({ ...d, [item.id]: { ...d[item.id], observacoes: e.target.value } }))}
+                    className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:border-gold" />
+                </div>
+                {item.ambientes?.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Ambientes</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {item.ambientes.map((a, i) => (
+                        <span key={i} className="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-600">
+                          {typeof a === 'string' ? a : a.nome}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {item.historico?.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Histórico</p>
+                    <div className="space-y-1">
+                      {[...item.historico].reverse().slice(0, 6).map((h, i) => {
+                        const d = new Date(h.data);
+                        const ds = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                        return (
+                          <div key={i} className="text-[11px] text-gray-500">
+                            <span className="font-semibold">{CADERNO_STATUS_CFG[h.status]?.label || h.status}</span>
+                            <span className="text-gray-400"> · {ds}</span>
+                            {h.obs && <span className="text-gray-400"> — {h.obs}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => saveEdit(item)} disabled={isSaving}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold bg-gold text-navy disabled:opacity-50">
+                    {isSaving ? 'Salvando...' : 'Salvar'}
+                  </button>
+                  <button onClick={() => removeItem(item.id)} disabled={isSaving}
+                    className="px-4 py-2 rounded-xl text-xs font-bold border-2 border-red-200 text-red-400">
+                    Remover
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            {!isEditing && (
+              <div className="px-4 pb-3 pt-1 flex gap-2 flex-wrap">
+                {item.status === 'em_execucao' && (
+                  <button onClick={() => patchItem(item.id, { status: 'concluido' }, 'Caderno técnico concluído')} disabled={isSaving}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold bg-green-500 text-white disabled:opacity-50">
+                    {isSaving ? '...' : 'Marcar Concluído'}
+                  </button>
+                )}
+                {item.status === 'concluido' && (
+                  <button onClick={() => patchItem(item.id, { status: 'em_apresentacao' }, 'Enviado para apresentação ao cliente')} disabled={isSaving}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold bg-purple-500 text-white disabled:opacity-50">
+                    {isSaving ? '...' : 'Enviar para Apresentação'}
+                  </button>
+                )}
+                {item.status === 'em_apresentacao' && (
+                  <>
+                    <button onClick={() => patchItem(item.id, { status: 'aprovado' }, 'Aprovado pelo cliente')} disabled={isSaving}
+                      className="flex-1 py-2 rounded-xl text-xs font-bold bg-emerald-500 text-white disabled:opacity-50">
+                      {isSaving ? '...' : 'Aprovado'}
+                    </button>
+                    <div className="w-full flex gap-2 items-center">
+                      <input value={reprovObs[item.id] || ''} onChange={(e) => setReprovObs((r) => ({ ...r, [item.id]: e.target.value }))}
+                        placeholder="Motivo da reprovação..." className="flex-1 border-2 border-red-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-red-400" />
+                      <button onClick={() => patchItem(item.id, { status: 'reprovado' }, reprovObs[item.id] || 'Reprovado pelo cliente')} disabled={isSaving}
+                        className="px-3 py-2 rounded-xl text-xs font-bold border-2 border-red-400 text-red-500 disabled:opacity-50">
+                        Reprovado
+                      </button>
+                    </div>
+                  </>
+                )}
+                {item.status === 'reprovado' && (
+                  <button onClick={() => patchItem(item.id, { status: 'em_execucao' }, 'Retornado para execução após reprovação')} disabled={isSaving}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold bg-blue-500 text-white disabled:opacity-50">
+                    {isSaving ? '...' : 'Retornar para Execução'}
+                  </button>
+                )}
+                {item.status === 'aprovado' && (
+                  <div className="flex-1 text-center py-2 text-xs font-bold text-emerald-600 bg-emerald-50 rounded-xl border border-emerald-200">
+                    Plano de Corte
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function ProjetosTab({ obras, loading, onSaveEquipe }) {
+  const [subTab, setSubTab] = useState('obras');
   const [aberto, setAberto] = useState(null);
   const [equipeEdits, setEquipeEdits] = useState({});
   const [saving, setSaving] = useState(null);
+  const [cadernoIds, setCadernoIds] = useState(new Set());
+  const [enviando, setEnviando] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/caderno').then((r) => r.json()).then((d) => {
+      setCadernoIds(new Set((d || []).map((i) => i.id)));
+    }).catch(() => {});
+  }, []);
 
   const statusMap = {
     no_prazo: { label: 'No prazo', bar: 'bg-green-400',  badge: 'bg-green-100 text-green-600' },
@@ -514,72 +784,118 @@ function ProjetosTab({ obras, loading, onSaveEquipe }) {
     setSaving(null);
   };
 
-  if (loading) return <div className="text-center py-12 text-sm text-gray-400">Carregando...</div>;
-  if (obras.length === 0) return <div className="text-center py-12 text-sm text-gray-400">Nenhuma obra cadastrada.</div>;
+  const enviarParaCaderno = async (obra) => {
+    setEnviando(obra.id);
+    try {
+      const r = await fetch('/api/caderno', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: obra.id, nome: obra.nome, ambientes: obra.ambientes, prazo: obra.prazo }),
+      });
+      if (r.ok) {
+        setCadernoIds((prev) => new Set([...prev, obra.id]));
+        setSubTab('caderno');
+      }
+    } finally { setEnviando(null); }
+  };
 
   return (
-    <div className="px-3 py-3">
-      <p className="text-xs text-gray-400 uppercase tracking-wide font-bold px-1 mb-3">
-        {obras.length} projeto{obras.length !== 1 ? 's' : ''} ativos
-      </p>
-      {obras.map((obra) => {
-        const sm = statusMap[obra.status] || statusMap.no_prazo;
-        const isOpen = aberto === obra.id;
-        const editEquipe = equipeEdits[obra.id] ?? (obra.equipe || []);
-        return (
-          <div key={obra.id} className="bg-white rounded-xl shadow-sm mb-2.5 overflow-hidden">
-            <button className={`w-full flex items-center gap-3 px-4 py-3.5 ${isOpen ? 'border-b border-gray-100' : ''}`}
-              onClick={() => handleOpen(obra.id, obra.equipe)}>
-              <div className={`w-1 h-10 rounded-full flex-shrink-0 ${sm.bar}`} />
-              <div className="flex-1 min-w-0 text-left">
-                <div className="font-semibold text-[15px] text-gray-900 truncate">{obra.nome}</div>
-                <div className="text-xs text-gray-400">
-                  {obra.prazo ? fmtDate(obra.prazo) + diasRest(obra.prazo) : 'Sem prazo'}
-                  {obra.ambientes?.length ? ` · ${obra.ambientes.length} amb.` : ''}
-                </div>
-              </div>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${sm.badge}`}>{sm.label}</span>
-              <svg className={`w-4 h-4 text-gray-300 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
-            </button>
+    <div>
+      {/* Sub-nav */}
+      <div className="flex gap-2 px-3 pt-3 pb-2">
+        <button onClick={() => setSubTab('obras')}
+          className={`px-4 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${subTab === 'obras' ? 'border-navy bg-navy text-white' : 'border-gray-200 bg-white text-gray-500'}`}>
+          Obras
+        </button>
+        <button onClick={() => setSubTab('caderno')}
+          className={`px-4 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${subTab === 'caderno' ? 'border-navy bg-navy text-white' : 'border-gray-200 bg-white text-gray-500'}`}>
+          Caderno Técnico
+          {cadernoIds.size > 0 && <span className="ml-1.5 bg-gold text-navy rounded-full px-1.5 py-0.5 text-[9px]">{cadernoIds.size}</span>}
+        </button>
+      </div>
 
-            {isOpen && (
-              <div className="px-4 pb-4 pt-3 space-y-3">
-                {/* Equipe editável */}
-                <div>
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Equipe escalada</p>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {EQUIPES_OBRA.map((eq) => {
-                      const sel = editEquipe.includes(eq);
-                      return (
-                        <button key={eq} onClick={() => toggleMembro(obra.id, eq)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${sel ? 'border-navy bg-navy text-gold' : 'border-gray-200 bg-white text-gray-500'}`}>
-                          {eq}
+      {subTab === 'caderno' && <CadernoTab />}
+
+      {subTab === 'obras' && (
+        <div className="px-3 pb-3">
+          {loading && <div className="text-center py-12 text-sm text-gray-400">Carregando...</div>}
+          {!loading && obras.length === 0 && <div className="text-center py-12 text-sm text-gray-400">Nenhuma obra cadastrada.</div>}
+          {!loading && obras.length > 0 && (
+            <>
+              <p className="text-xs text-gray-400 uppercase tracking-wide font-bold px-1 mb-3">
+                {obras.length} projeto{obras.length !== 1 ? 's' : ''} ativos
+              </p>
+              {obras.map((obra) => {
+                const sm = statusMap[obra.status] || statusMap.no_prazo;
+                const isOpen = aberto === obra.id;
+                const editEquipe = equipeEdits[obra.id] ?? (obra.equipe || []);
+                const jaNoCaderno = cadernoIds.has(obra.id);
+                return (
+                  <div key={obra.id} className="bg-white rounded-xl shadow-sm mb-2.5 overflow-hidden">
+                    <button className={`w-full flex items-center gap-3 px-4 py-3.5 ${isOpen ? 'border-b border-gray-100' : ''}`}
+                      onClick={() => handleOpen(obra.id, obra.equipe)}>
+                      <div className={`w-1 h-10 rounded-full flex-shrink-0 ${sm.bar}`} />
+                      <div className="flex-1 min-w-0 text-left">
+                        <div className="font-semibold text-[15px] text-gray-900 truncate">{obra.nome}</div>
+                        <div className="text-xs text-gray-400">
+                          {obra.prazo ? fmtDate(obra.prazo) + diasRest(obra.prazo) : 'Sem prazo'}
+                          {obra.ambientes?.length ? ` · ${obra.ambientes.length} amb.` : ''}
+                        </div>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${sm.badge}`}>{sm.label}</span>
+                      <svg className={`w-4 h-4 text-gray-300 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+
+                    {isOpen && (
+                      <div className="px-4 pb-4 pt-3 space-y-3">
+                        {/* Equipe editável */}
+                        <div>
+                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Equipe escalada</p>
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {EQUIPES_OBRA.map((eq) => {
+                              const sel = editEquipe.includes(eq);
+                              return (
+                                <button key={eq} onClick={() => toggleMembro(obra.id, eq)}
+                                  className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${sel ? 'border-navy bg-navy text-gold' : 'border-gray-200 bg-white text-gray-500'}`}>
+                                  {eq}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <button onClick={() => handleSave(obra.id)} disabled={saving === obra.id}
+                            className="w-full py-2 rounded-xl text-xs font-bold bg-gold text-navy disabled:opacity-50">
+                            {saving === obra.id ? 'Salvando...' : 'Salvar escala'}
+                          </button>
+                        </div>
+
+                        {/* Ambientes */}
+                        {obra.ambientes?.length > 0 && (
+                          <div>
+                            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Ambientes</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {obra.ambientes.map((a) => (
+                                <span key={typeof a === 'string' ? a : a.id} className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                  {typeof a === 'string' ? a : a.nome}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Enviar para Caderno Técnico */}
+                        <button onClick={() => enviarParaCaderno(obra)} disabled={jaNoCaderno || enviando === obra.id}
+                          className={`w-full py-2 rounded-xl text-xs font-bold border-2 transition-all ${jaNoCaderno ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-default' : 'border-navy text-navy hover:bg-navy hover:text-white'}`}>
+                          {enviando === obra.id ? 'Enviando...' : jaNoCaderno ? 'Já no Caderno Técnico' : 'Enviar para Caderno Técnico'}
                         </button>
-                      );
-                    })}
+                      </div>
+                    )}
                   </div>
-                  <button onClick={() => handleSave(obra.id)} disabled={saving === obra.id}
-                    className="w-full py-2 rounded-xl text-xs font-bold bg-gold text-navy disabled:opacity-50">
-                    {saving === obra.id ? 'Salvando...' : 'Salvar escala'}
-                  </button>
-                </div>
-
-                {/* Ambientes */}
-                {obra.ambientes?.length > 0 && (
-                  <div>
-                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Ambientes</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {obra.ambientes.map((a) => (
-                        <span key={a.id} className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">{a.nome}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })}
+                );
+              })}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -909,6 +1225,9 @@ export default function CeoPage() {
   const [loginHistory, setLoginHistory] = useState([]);
   const [loadingAcessos, setLoadingAcessos] = useState(false);
   const [notas, setNotas] = useState([]);
+  const [notasDate, setNotasDate] = useState(today());
+  const [gerenteFab, setGerenteFab] = useState(null);
+  const [loadingFab, setLoadingFab] = useState(false);
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2000); };
 
   const handleLogout = () => {
@@ -987,6 +1306,21 @@ export default function CeoPage() {
     }
   }, [initDia, initFabrica, fetchObras]);
 
+  const fetchNotas = useCallback(async (date) => {
+    try {
+      const r = await fetch(`/api/notas?date=${date || today()}`);
+      const d = await r.json();
+      setNotas(Array.isArray(d) ? d : []);
+    } catch { setNotas([]); }
+  }, []);
+
+  const fetchGerenteFab = useCallback(async (date) => {
+    setLoadingFab(true);
+    try { const r = await fetch(`/api/gerente-fab?date=${date || today()}`); const d = await r.json(); setGerenteFab(d || null); }
+    catch { setGerenteFab(null); }
+    finally { setLoadingFab(false); }
+  }, []);
+
   const handleAuth = () => {
     // DEBUG: Remove password validation - accept anything
     localStorage.setItem('lukana_ceo_auth', 'debug_mode');
@@ -1056,7 +1390,7 @@ export default function CeoPage() {
 
   // Ajustar aba quando viewMode muda
   useEffect(() => {
-    if (viewMode === 'diretor' && ['meudia', 'fabrica', 'equipe'].includes(activeTab)) {
+    if (viewMode === 'diretor' && ['meudia'].includes(activeTab)) {
       setActiveTab('acompanhamento');
     }
   }, [viewMode, activeTab]);
@@ -1065,6 +1399,8 @@ export default function CeoPage() {
   useEffect(() => { if (activeTab === 'meudia') setEquipeDate(viewDate); }, [viewDate, activeTab]);
   useEffect(() => { if (auth && (activeTab === 'equipe' || activeTab === 'meudia')) fetchEquipe(equipeDate); }, [auth, activeTab, equipeDate, fetchEquipe]);
   useEffect(() => { if (auth && activeTab === 'cnc') fetchCnc(); }, [auth, activeTab, fetchCnc]);
+  useEffect(() => { if (auth && activeTab === 'fabrica') fetchGerenteFab(viewFabDate); }, [auth, activeTab, viewFabDate, fetchGerenteFab]);
+  useEffect(() => { if (auth && activeTab === 'acompanhamento') fetchNotas(notasDate); }, [auth, activeTab, notasDate, fetchNotas]);
 
   const fetchPedidos = useCallback(async () => {
     setLoadingPedidos(true);
@@ -1156,7 +1492,7 @@ export default function CeoPage() {
 
   // Filtrar TABS baseado em viewMode
   const TABS = viewMode === 'diretor'
-    ? ALL_TABS.filter(t => !['meudia', 'fabrica', 'equipe'].includes(t.id))
+    ? ALL_TABS.filter(t => !['meudia'].includes(t.id))
     : ALL_TABS;
 
   return (
@@ -1174,7 +1510,13 @@ export default function CeoPage() {
 
         {activeTab === 'acompanhamento' && (
           <div className="px-3 py-3">
-            <p className="text-xs text-gray-400 uppercase tracking-wide font-bold mb-3 px-1">Acompanhamento de anotações</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wide font-bold mb-2 px-1">Acompanhamento de anotações</p>
+            <DateNavSimple viewDate={notasDate} setViewDate={setNotasDate} days={15} />
+            {notasDate !== today() && (
+              <div className="mb-3 px-1 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 font-semibold text-center">
+                Visualizando {notasDate.split('-').reverse().join('/')} · somente leitura
+              </div>
+            )}
             {notas.length === 0 ? (
               <div className="space-y-2 text-sm text-gray-500">
                 <p className="text-center py-8">📋 Nenhuma anotação registrada hoje ainda</p>
@@ -1279,16 +1621,70 @@ export default function CeoPage() {
 
         {activeTab === 'fabrica' && (
           <div className="px-3 py-3">
-            <p className="text-xs text-gray-400 uppercase tracking-wide font-bold mb-3 px-1">Status da fábrica</p>
-            <div className="space-y-2 text-sm text-gray-500">
-              <p className="text-center py-8">🏭 Status e anotações do Gerente e Coordenadores de Obra serão exibidos aqui</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-gray-400 uppercase tracking-wide font-bold px-1">Relatório do Gerente</p>
+              <button onClick={() => fetchGerenteFab(viewFabDate)} className="px-3 py-1.5 rounded-full text-xs font-bold border-2 border-gold text-gold-d bg-white">Atualizar</button>
             </div>
+            <DateNavSimple viewDate={viewFabDate} setViewDate={setViewFabDate} days={15} />
+            {viewFabDate !== today() && (
+              <div className="mb-3 px-1 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 font-semibold text-center">
+                Visualizando {viewFabDate.split('-').reverse().join('/')} · somente leitura
+              </div>
+            )}
+            {loadingFab && <div className="text-center py-10 text-sm text-gray-400">Carregando...</div>}
+            {!loadingFab && !gerenteFab && (
+              <div className="text-center py-12 text-sm text-gray-400">Gerente não preencheu neste dia.</div>
+            )}
+            {!loadingFab && gerenteFab && (() => {
+              const ST = { sim: 'Sim', nao: 'Não', outro: 'Outro' };
+              const savedAt = gerenteFab.saved_at ? new Date(gerenteFab.saved_at) : null;
+              const savedStr = savedAt ? `${String(savedAt.getHours()).padStart(2,'0')}:${String(savedAt.getMinutes()).padStart(2,'0')}` : null;
+              return (
+                <div className="space-y-2">
+                  {savedStr && <p className="text-[10px] text-gray-400 px-1 mb-1">Preenchido às {savedStr}</p>}
+                  {gerenteFab.gf1 && (gerenteFab.gf1.obra || gerenteFab.gf1.descricao) && (
+                    <div className="bg-white rounded-xl shadow-sm px-4 py-3">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Em produção hoje</p>
+                      {gerenteFab.gf1.obra && <p className="text-sm text-gray-800 font-semibold">{gerenteFab.gf1.obra}{gerenteFab.gf1.ambiente ? ` · ${gerenteFab.gf1.ambiente}` : ''}</p>}
+                      {gerenteFab.gf1.descricao && <p className="text-sm text-gray-600 mt-0.5">{gerenteFab.gf1.descricao}</p>}
+                    </div>
+                  )}
+                  {gerenteFab.gf4?.length > 0 && (
+                    <div className="bg-white rounded-xl shadow-sm px-4 py-3">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Saem hoje</p>
+                      {gerenteFab.gf4.map((it, i) => (
+                        <p key={i} className="text-sm text-gray-700">{[it.obra, it.cliente, it.comodo, it.movel].filter(Boolean).join(' · ')}</p>
+                      ))}
+                    </div>
+                  )}
+                  {gerenteFab.gf3?.length > 0 && (
+                    <div className="bg-white rounded-xl shadow-sm px-4 py-3">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Pronto amanhã cedo</p>
+                      {gerenteFab.gf3.map((it, i) => (
+                        <p key={i} className="text-sm text-gray-700">{[it.obra, it.cliente, it.comodo, it.movel].filter(Boolean).join(' · ')}</p>
+                      ))}
+                    </div>
+                  )}
+                  {[{ key: 'gf2', label: 'Travado por material' }, { key: 'gf5', label: 'Problema de qualidade' }, { key: 'gf6', label: 'Máquina com problema' }].map(({ key: k, label }) => {
+                    const f = gerenteFab[k];
+                    if (!f?.status) return null;
+                    const isProblema = f.status === 'sim' || f.status === 'outro';
+                    return (
+                      <div key={k} className={`bg-white rounded-xl shadow-sm px-4 py-3 border-l-4 ${isProblema ? 'border-red-400' : 'border-green-400'}`}>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">{label}</p>
+                        <p className={`text-sm font-semibold ${isProblema ? 'text-red-600' : 'text-green-600'}`}>{ST[f.status] || f.status}{f.text ? ` — ${f.text}` : ''}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         )}
 
         {activeTab === 'equipe' && (
           <div className="px-3 py-3">
-            <DateNavSimple viewDate={equipeDate} setViewDate={setEquipeDate} days={7} />
+            <DateNavSimple viewDate={equipeDate} setViewDate={setEquipeDate} days={15} />
             {equipeDate !== today() && (
               <div className="mb-3 px-1 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 font-semibold text-center">
                 Visualizando {equipeDate.split('-').reverse().join('/')} · somente leitura
@@ -1342,35 +1738,47 @@ export default function CeoPage() {
         {activeTab === 'acessos' && (
           <div className="px-3 py-3">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-gray-400 uppercase tracking-wide font-bold px-1">Histórico de acessos</p>
+              <p className="text-xs text-gray-400 uppercase tracking-wide font-bold px-1">Acessos</p>
               <button onClick={fetchLoginHistory} className="px-3 py-1.5 rounded-full text-xs font-bold border-2 border-gold text-gold-d bg-white">Atualizar</button>
             </div>
             {loadingAcessos && <div className="text-center py-10 text-sm text-gray-400">Carregando...</div>}
             {!loadingAcessos && loginHistory.length === 0 && (
               <div className="text-center py-12 text-sm text-gray-400">Nenhum acesso registrado.</div>
             )}
-            {!loadingAcessos && loginHistory.map((ev) => {
-              const d = new Date(ev.timestamp);
-              const dia = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
-              const hora = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-              const roleLabels = {
-                diretor: 'Diretor', gerente: 'Gerente',
-                coordenador_obra: 'Coord. Obra', coordenador_projetos: 'Coord. Projetos',
-                encarregado: 'Encarregado', marceneiro: 'Marceneiro',
-                montador: 'Montador', auxiliar: 'Auxiliar', cnc: 'Operador CNC',
-              };
-              const roleLabel = roleLabels[ev.role] || ev.role;
-              const statusText = ev.isOnline ? '🟢 Online agora' : `⚪ Visto em ${dia} ${hora}`;
-              return (
-                <div key={ev.id} className="bg-white rounded-xl shadow-sm px-4 py-3 mb-2 flex items-center gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm text-gray-900">{ev.nome}</div>
-                    <div className="text-xs text-gray-400">{roleLabel}</div>
-                  </div>
-                  <div className="text-[11px] flex-shrink-0" style={{ color: ev.isOnline ? '#22c55e' : '#9ca3af' }}>{statusText}</div>
-                </div>
-              );
-            })}
+            {!loadingAcessos && loginHistory.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {loginHistory.map((ev) => {
+                  const d = new Date(ev.timestamp);
+                  const now = new Date();
+                  const isToday = d.toDateString() === now.toDateString();
+                  const hora = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                  const dia = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+                  const roleLabels = {
+                    diretor: 'Diretor', gerente: 'Gerente',
+                    coordenador_obra: 'Coord. Obra', coordenador_projetos: 'Coord. Projetos',
+                    encarregado: 'Encarregado', marceneiro: 'Marceneiro',
+                    montador: 'Montador', auxiliar: 'Auxiliar', cnc: 'Op. CNC',
+                  };
+                  const roleLabel = roleLabels[ev.role] || ev.role;
+                  const firstName = ev.nome.split(' ')[0];
+                  const initials = ev.nome.split(' ').filter(Boolean).slice(0,2).map(n => n[0]).join('').toUpperCase();
+                  const visto = ev.isOnline ? 'Online' : isToday ? `às ${hora}` : `${dia} ${hora}`;
+                  return (
+                    <div key={ev.id} className="bg-white rounded-xl shadow-sm p-3 flex flex-col items-center text-center gap-1">
+                      <div className="relative mt-1">
+                        <div className="w-11 h-11 rounded-full bg-navy flex items-center justify-center text-white font-bold text-sm">
+                          {initials}
+                        </div>
+                        <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${ev.isOnline ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      </div>
+                      <div className="font-semibold text-sm text-gray-900 mt-0.5 leading-tight">{firstName}</div>
+                      <div className="text-[10px] text-gray-400 leading-tight">{roleLabel}</div>
+                      <div className={`text-[10px] font-medium mt-0.5 ${ev.isOnline ? 'text-green-500' : 'text-gray-400'}`}>{visto}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 

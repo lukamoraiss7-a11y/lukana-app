@@ -8,7 +8,7 @@ const monthKey = (date) => `subs:month:${date.slice(0, 7)}`;
 export async function upsert(submission) {
   const k = key(submission.date);
   await redis.hset(k, { [submission.name]: JSON.stringify(submission) });
-  await redis.expire(k, 60 * 60 * 24 * 7);
+  await redis.expire(k, 60 * 60 * 24 * 15);
   // Arquivo mensal — 1 ano
   const mk = monthKey(submission.date);
   await redis.hset(mk, { [`${submission.date}:${submission.name}`]: JSON.stringify(submission) });
@@ -101,6 +101,17 @@ export async function getEstoque() {
 
 export async function saveEstoque(items) {
   await redis.set('lkn:estoque:list', JSON.stringify(items));
+}
+
+// ── Caderno Técnico ────────────────────────────────────────────────────────
+export async function getCaderno() {
+  const data = await redis.get('caderno:items');
+  if (!data) return [];
+  return typeof data === 'string' ? JSON.parse(data) : data;
+}
+
+export async function saveCaderno(items) {
+  await redis.set('caderno:items', JSON.stringify(items));
 }
 
 // ── Gerente Fábrica ────────────────────────────────────────────────────────
