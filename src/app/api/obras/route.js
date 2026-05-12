@@ -46,8 +46,8 @@ export async function GET(request) {
       return NextResponse.json(aprovadas_only ? result.filter((o) => o.aprovada === true) : result);
     }
 
-    // Merge: ClickUp is authoritative for id/nome/prazo/ambientes
-    // Redis preserves: status, equipe, notas, percentual, aprovada, and any extra fields
+    // Merge: ClickUp is authoritative for id/nome/ambientes
+    // prazo: Redis (set by Ariel in-app) takes priority over ClickUp
     const byId = Object.fromEntries(base.map((o) => [o.id, o]));
     const merged = cuObras.map((cu) => {
       const ex = byId[cu.id] || {};
@@ -55,7 +55,7 @@ export async function GET(request) {
         ...ex,
         id: cu.id,
         nome: cu.nome,
-        prazo: cu.prazo ?? ex.prazo ?? null,
+        prazo: ex.prazo ?? cu.prazo ?? null,
         ambientes: cu.ambientes.length > 0 ? cu.ambientes : (ex.ambientes || []),
         status: ex.status || 'no_prazo',
         equipe: ex.equipe || [],
@@ -97,6 +97,9 @@ export async function PATCH(request) {
     if ('equipe' in body) {
       if (!Array.isArray(body.equipe)) return NextResponse.json({ error: 'equipe deve ser array' }, { status: 400 });
       obras[idx] = { ...obras[idx], equipe: body.equipe };
+    }
+    if ('prazo' in body) {
+      obras[idx] = { ...obras[idx], prazo: body.prazo || null };
     }
     if ('aprovada' in body) {
       obras[idx] = {
