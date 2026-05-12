@@ -642,6 +642,28 @@ function ProjetosTab({ obras, loading, onSaveEquipe, onSavePrazo, isAriel }) {
           {!loading && obras.length === 0 && <div className="text-center py-12 text-sm text-gray-400">Nenhuma obra cadastrada.</div>}
           {!loading && obras.length > 0 && (
             <>
+              {/* Contador de status */}
+              {(() => {
+                const atrasadas = obras.filter(o => o.status === 'atrasada').length;
+                const risco     = obras.filter(o => o.status === 'em_risco').length;
+                const ok        = obras.filter(o => o.status === 'no_prazo').length;
+                return (
+                  <div className="flex gap-2 mb-3">
+                    <div className={`flex-1 rounded-xl px-3 py-2.5 text-center border-2 ${atrasadas > 0 ? 'border-red-300 bg-red-50' : 'border-gray-100 bg-white'}`}>
+                      <div className={`text-2xl font-bold ${atrasadas > 0 ? 'text-red-500' : 'text-gray-300'}`}>{atrasadas}</div>
+                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Atrasada{atrasadas !== 1 ? 's' : ''}</div>
+                    </div>
+                    <div className={`flex-1 rounded-xl px-3 py-2.5 text-center border-2 ${risco > 0 ? 'border-amber-200 bg-amber-50' : 'border-gray-100 bg-white'}`}>
+                      <div className={`text-2xl font-bold ${risco > 0 ? 'text-amber-500' : 'text-gray-300'}`}>{risco}</div>
+                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Em Risco</div>
+                    </div>
+                    <div className="flex-1 rounded-xl px-3 py-2.5 text-center border-2 border-gray-100 bg-white">
+                      <div className="text-2xl font-bold text-green-500">{ok}</div>
+                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">No Prazo</div>
+                    </div>
+                  </div>
+                );
+              })()}
               <p className="text-xs text-gray-400 uppercase tracking-wide font-bold px-1 mb-3">
                 {obras.length} projeto{obras.length !== 1 ? 's' : ''} ativos
               </p>

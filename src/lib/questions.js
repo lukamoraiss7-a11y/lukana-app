@@ -166,12 +166,13 @@ export const PARTICIPANTES_REUNIAO = [
 
 // ── Equipes de obra (instalação em campo) ──────────────────────────────────
 export const EQUIPES_OBRA = [
-  'Equipe 01 - Nil',
-  'Equipe 02 - Gomes + Luiz',
-  'Equipe 03 - Kauã + Ivan',
-  'Equipe 04 - João + João',
-  'Equipe 05 - Rodrigo + José',
-  'Equipe 06 - Victor + Eduardo',
-  'Equipe 07 - Vinni',
-  'Terceirizado',
+  'Eqp Interna Luciano',
+  'Eqp Victor',
+  'Eqp Gomes',
+  'Eqp João',
+  'Eqp Jean',
+  'Eqp Rodrigo',
+  'Eqp Terceiro Carlito',
+  'Eqp Terceiro Thiago',
+  'Eqp Terceiro Outro',
 ];
