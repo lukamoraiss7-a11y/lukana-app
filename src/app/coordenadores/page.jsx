@@ -182,7 +182,7 @@ const CT_STATUS_CFG = {
   reprovado:       { label: 'Reprovado',            badge: 'bg-red-100 text-red-600',         bar: 'bg-red-500' },
 };
 
-function CadernoTecnicoTab({ obras }) {
+function CadernoTecnicoTab() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState('todos');
@@ -194,6 +194,8 @@ function CadernoTecnicoTab({ obras }) {
   const [enviando, setEnviando] = useState(null);
   const [showEnviar, setShowEnviar] = useState(false);
   const [cadernoIds, setCadernoIds] = useState(new Set());
+  const [obrasDisponiveis, setObrasDisponiveis] = useState([]);
+  const [loadingObras, setLoadingObras] = useState(false);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -237,6 +239,20 @@ function CadernoTecnicoTab({ obras }) {
     } finally { setSaving(null); }
   };
 
+  const abrirPainelImportar = async () => {
+    const abrir = !showEnviar;
+    setShowEnviar(abrir);
+    if (abrir) {
+      setLoadingObras(true);
+      try {
+        const r = await fetch('/api/obras');
+        const d = await r.json();
+        setObrasDisponiveis(Array.isArray(d) ? d : []);
+      } catch { setObrasDisponiveis([]); }
+      finally { setLoadingObras(false); }
+    }
+  };
+
   const enviarParaCaderno = async (obra) => {
     setEnviando(obra.id);
     try {
@@ -246,8 +262,8 @@ function CadernoTecnicoTab({ obras }) {
         body: JSON.stringify({ id: obra.id, nome: obra.nome, ambientes: obra.ambientes, prazo: obra.prazo }),
       });
       if (r.ok) {
+        setCadernoIds(prev => new Set([...prev, obra.id]));
         await fetchItems();
-        setShowEnviar(false);
       }
     } finally { setEnviando(null); }
   };
@@ -265,7 +281,7 @@ function CadernoTecnicoTab({ obras }) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs text-gray-400 uppercase tracking-wide font-bold">{items.length} projeto{items.length !== 1 ? 's' : ''}</p>
-        <button onClick={() => setShowEnviar(v => !v)}
+        <button onClick={abrirPainelImportar}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-gold text-navy">
           <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
           Adicionar projeto
@@ -275,11 +291,12 @@ function CadernoTecnicoTab({ obras }) {
       {/* Painel adicionar */}
       {showEnviar && (
         <div className="bg-white rounded-xl shadow-sm mb-3 p-4">
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Projetos fechados disponíveis</p>
-          {obras.filter(o => !cadernoIds.has(o.id)).length === 0 && (
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Projetos disponíveis</p>
+          {loadingObras && <p className="text-sm text-gray-400 text-center py-3">Carregando...</p>}
+          {!loadingObras && obrasDisponiveis.filter(o => !cadernoIds.has(o.id)).length === 0 && (
             <p className="text-sm text-gray-400 text-center py-3">Todos os projetos já estão no Caderno Técnico.</p>
           )}
-          {obras.filter(o => !cadernoIds.has(o.id)).map(obra => (
+          {!loadingObras && obrasDisponiveis.filter(o => !cadernoIds.has(o.id)).map(obra => (
             <div key={obra.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
               <div className="flex-1 min-w-0 pr-3">
                 <p className="text-sm font-semibold text-gray-900 truncate">{obra.nome}</p>
@@ -1377,7 +1394,7 @@ export default function CoordenadoresPage() {
         )}
 
         {activeTab === 'caderno' && <CadernoTab obras={obras} session={session} />}
-        {activeTab === 'tecnico' && <CadernoTecnicoTab obras={obras} />}
+        {activeTab === 'tecnico' && <CadernoTecnicoTab />}
         {activeTab === 'termo' && <TermoTab obras={obras} session={session} />}
         {activeTab === 'atas' && <AtasTab session={session} />}
 
