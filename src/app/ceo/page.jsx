@@ -571,7 +571,7 @@ function CadernoTab() {
   );
 }
 
-function ProjetosTab({ obras, loading, onSaveEquipe, onSavePrazo }) {
+function ProjetosTab({ obras, loading, onSaveEquipe, onSavePrazo, isAriel }) {
   const [subTab, setSubTab] = useState('obras');
   const [aberto, setAberto] = useState(null);
   const [equipeEdits, setEquipeEdits] = useState({});
@@ -688,20 +688,28 @@ function ProjetosTab({ obras, loading, onSaveEquipe, onSavePrazo }) {
                           </button>
                         </div>
 
-                        {/* Prazo */}
-                        <div>
-                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Prazo de entrega</p>
-                          <div className="flex gap-2">
-                            <input type="date"
-                              defaultValue={obra.prazo || ''}
-                              onChange={(e) => setPrazoEdits((p) => ({ ...p, [obra.id]: e.target.value }))}
-                              className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gold" />
-                            <button onClick={() => handleSavePrazo(obra.id)} disabled={savingPrazo === obra.id || prazoEdits[obra.id] === undefined}
-                              className="px-4 py-2 rounded-xl text-xs font-bold bg-gold text-navy disabled:opacity-40">
-                              {savingPrazo === obra.id ? '...' : 'Salvar'}
-                            </button>
+                        {/* Prazo — editável só pela Ariel */}
+                        {isAriel ? (
+                          <div>
+                            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Prazo de entrega</p>
+                            <div className="flex gap-2">
+                              <input type="date"
+                                defaultValue={obra.prazo || ''}
+                                onChange={(e) => setPrazoEdits((p) => ({ ...p, [obra.id]: e.target.value }))}
+                                className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gold" />
+                              <button onClick={() => handleSavePrazo(obra.id)} disabled={savingPrazo === obra.id || prazoEdits[obra.id] === undefined}
+                                className="px-4 py-2 rounded-xl text-xs font-bold bg-gold text-navy disabled:opacity-40">
+                                {savingPrazo === obra.id ? '...' : 'Salvar'}
+                              </button>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          obra.prazo && (
+                            <div className="text-[11px] text-gray-400">
+                              Prazo: <span className="font-semibold text-gray-600">{obra.prazo.split('-').reverse().join('/')}</span>
+                            </div>
+                          )
+                        )}
 
                         {/* Ambientes */}
                         {obra.ambientes?.length > 0 && (
@@ -1544,6 +1552,7 @@ export default function CeoPage() {
         )}
 
         {activeTab === 'projetos' && <ProjetosTab obras={obras} loading={loadingObras}
+          isAriel={ceoSession?.role === 'ariel'}
           onSaveEquipe={async (id, equipe) => {
             await fetch('/api/obras', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, equipe }) }).catch(() => {});
             setObras((prev) => prev.map((o) => o.id === id ? { ...o, equipe } : o));
