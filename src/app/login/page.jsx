@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authenticate, setSession, getSession } from '@/lib/auth';
 import Link from 'next/link';
@@ -262,15 +262,9 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return <div className="min-h-dvh flex items-center justify-center bg-navy" />;
-  }
-
-  return <LoginForm />;
+  return (
+    <Suspense fallback={<div className="min-h-dvh flex items-center justify-center bg-navy" />}>
+      <LoginForm />
+    </Suspense>
+  );
 }
