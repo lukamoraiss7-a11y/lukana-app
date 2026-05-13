@@ -711,17 +711,21 @@ function GestaoEscritorioTab({ obras }) {
     }
   };
 
+  const EQUIPE_ESC = ['Munyke', 'Ana', 'Aline', 'Letícia', 'Mariana'];
+  const [pessoasSelecionadas, setPessoasSelecionadas] = useState({});
+
   const calcularDias = (dataInicio, dataFim) => {
-    if (!dataInicio || !dataFim) return '—';
+    if (!dataInicio || !dataFim) return 0;
     const d1 = new Date(dataInicio);
     const d2 = new Date(dataFim);
     const diff = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
-    return diff >= 0 ? diff : '—';
+    return diff >= 0 ? diff : 0;
   };
 
   const tempoModelagem = calcularDias(formData.inicio_modelagem, formData.fim_modelagem);
   const tempoAlteracao = calcularDias(formData.solicitacao_alteracao, formData.entrega_alteracao);
   const tempoTecnico = calcularDias(formData.inicio_caderno_tecnico, formData.fim_caderno_tecnico);
+  const tempoTotal = tempoModelagem + tempoAlteracao + tempoTecnico;
 
   if (loading) return <div className="text-center py-12 text-sm text-gray-400">Carregando...</div>;
 
@@ -822,44 +826,91 @@ function GestaoEscritorioTab({ obras }) {
         </div>
       )}
 
+      {/* Designação de Tarefas */}
+      <div className="mb-4">
+        <p className="text-xs text-gray-400 uppercase tracking-wide font-bold mb-2">Quem está fazendo o quê</p>
+        <div className="grid grid-cols-2 gap-2">
+          {EQUIPE_ESC.map(pessoa => (
+            <button key={pessoa} onClick={() => setPessoasSelecionadas(prev => ({ ...prev, [pessoa]: !prev[pessoa] }))}
+              className={`py-2 rounded-lg text-xs font-bold transition-colors ${
+                pessoasSelecionadas[pessoa]
+                  ? 'bg-blue-100 text-blue-600 border-2 border-blue-300'
+                  : 'bg-gray-100 text-gray-600 border-2 border-gray-200'
+              }`}>
+              {pessoa}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* List */}
-      <div className="space-y-2">
-        {items.map(item => (
-          <div key={item.id} className="bg-white rounded-xl shadow-sm p-3">
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex-1">
-                <p className="font-bold text-sm text-navy">{item.obra}</p>
-                <p className="text-xs text-gray-500">{item.ambiente}</p>
+      <div className="space-y-3">
+        {items.map(item => {
+          const tMod = calcularDias(item.inicio_modelagem, item.fim_modelagem);
+          const tAlt = calcularDias(item.solicitacao_alteracao, item.entrega_alteracao);
+          const tTec = calcularDias(item.inicio_caderno_tecnico, item.fim_caderno_tecnico);
+          const tTotal = tMod + tAlt + tTec;
+
+          return (
+            <div key={item.id} className="bg-white rounded-xl shadow-sm p-4">
+              <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-100">
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm text-navy">{item.obra}</p>
+                  <p className="text-xs text-gray-500">{item.ambiente}</p>
+                  {item.responsavel && <p className="text-[10px] text-gray-400 mt-1">Resp: {item.responsavel}</p>}
+                </div>
+                <div className="flex gap-1 flex-shrink-0 ml-2">
+                  <button onClick={() => handleEdit(item)}
+                    className="px-2 py-1 text-xs font-bold bg-blue-100 text-blue-600 rounded-md">Edit</button>
+                  <button onClick={() => handleDelete(item.id)}
+                    className="px-2 py-1 text-xs font-bold bg-red-100 text-red-600 rounded-md">Del</button>
+                </div>
               </div>
-              <div className="flex gap-1">
-                <button onClick={() => handleEdit(item)}
-                  className="px-2 py-1 text-xs font-bold bg-blue-100 text-blue-600 rounded-md">Edit</button>
-                <button onClick={() => handleDelete(item.id)}
-                  className="px-2 py-1 text-xs font-bold bg-red-100 text-red-600 rounded-md">Del</button>
+
+              {/* Tempos em Cards */}
+              <div className="grid grid-cols-4 gap-2 mb-3">
+                {tMod > 0 && (
+                  <div className="bg-blue-50 p-2 rounded text-center">
+                    <p className="text-[9px] text-gray-400 uppercase font-bold">Model.</p>
+                    <p className="text-sm font-bold text-blue-600">{tMod}d</p>
+                  </div>
+                )}
+                {tAlt > 0 && (
+                  <div className="bg-yellow-50 p-2 rounded text-center">
+                    <p className="text-[9px] text-gray-400 uppercase font-bold">Altera.</p>
+                    <p className="text-sm font-bold text-yellow-600">{tAlt}d</p>
+                  </div>
+                )}
+                {tTec > 0 && (
+                  <div className="bg-purple-50 p-2 rounded text-center">
+                    <p className="text-[9px] text-gray-400 uppercase font-bold">Técn.</p>
+                    <p className="text-sm font-bold text-purple-600">{tTec}d</p>
+                  </div>
+                )}
+                {tTotal > 0 && (
+                  <div className="bg-green-50 p-2 rounded text-center">
+                    <p className="text-[9px] text-gray-400 uppercase font-bold">Total</p>
+                    <p className="text-sm font-bold text-green-600">{tTotal}d</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Status e Observações */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                    item.status === 'completo' ? 'bg-green-100 text-green-600'
+                    : item.status === 'parado' ? 'bg-red-100 text-red-600'
+                    : 'bg-blue-100 text-blue-600'
+                  }`}>
+                    {item.status === 'completo' ? 'Completo' : item.status === 'parado' ? 'Parado' : 'Em progresso'}
+                  </span>
+                </div>
+                {item.observacoes && <div className="text-gray-600 italic">{item.observacoes}</div>}
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-2 text-xs">
-              {tempoModelagem !== '—' && (
-                <div className="bg-blue-50 p-2 rounded">
-                  <p className="text-gray-400 text-[10px]">Modelagem</p>
-                  <p className="font-bold text-blue-600">{tempoModelagem}d</p>
-                </div>
-              )}
-              {tempoAlteracao !== '—' && (
-                <div className="bg-yellow-50 p-2 rounded">
-                  <p className="text-gray-400 text-[10px]">Alteração</p>
-                  <p className="font-bold text-yellow-600">{tempoAlteracao}d</p>
-                </div>
-              )}
-              {tempoTecnico !== '—' && (
-                <div className="bg-purple-50 p-2 rounded">
-                  <p className="text-gray-400 text-[10px]">Caderno</p>
-                  <p className="font-bold text-purple-600">{tempoTecnico}d</p>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
