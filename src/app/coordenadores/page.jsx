@@ -788,10 +788,10 @@ function GestaoEscritorioTab({ obras }) {
               <div>
                 <label className="text-[10px] font-bold text-gray-400 uppercase">Status</label>
                 <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}
-                  className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:border-gold">
-                  <option value="em_progresso">Em Progresso</option>
-                  <option value="concluido">Concluído</option>
-                  <option value="em_espera">Em Espera</option>
+                  className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-gold bg-white">
+                  <option value="em_progresso">Em progresso</option>
+                  <option value="completo">Completo</option>
+                  <option value="parado">Parado</option>
                 </select>
               </div>
             </div>
@@ -799,18 +799,18 @@ function GestaoEscritorioTab({ obras }) {
             <div>
               <label className="text-[10px] font-bold text-gray-400 uppercase">Observações</label>
               <textarea value={formData.observacoes} onChange={(e) => setFormData({...formData, observacoes: e.target.value})}
-                placeholder="Notas importantes..."
+                placeholder="Anotações gerais"
                 rows={2}
-                className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs resize-none focus:outline-none focus:border-gold" />
+                className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold resize-none" />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-2">
               <button onClick={handleSave} disabled={saving}
-                className="flex-1 py-2 rounded-lg font-bold text-xs bg-gold text-navy active:opacity-80 disabled:opacity-50">
-                {saving ? 'Salvando...' : (editId ? 'Atualizar' : 'Adicionar')}
+                className="flex-1 px-3 py-2 rounded-lg text-xs font-bold bg-gold text-navy disabled:opacity-50">
+                {editId ? 'Atualizar' : 'Adicionar'}
               </button>
-              <button onClick={() => { resetForm(); setShowForm(false); }}
-                className="flex-1 py-2 rounded-lg font-bold text-xs border-2 border-gray-200 text-gray-600 active:opacity-80">
+              <button onClick={() => { setShowForm(false); resetForm(); }}
+                className="flex-1 px-3 py-2 rounded-lg text-xs font-bold bg-gray-200 text-gray-600">
                 Cancelar
               </button>
             </div>
@@ -818,41 +818,41 @@ function GestaoEscritorioTab({ obras }) {
         </div>
       )}
 
-      {/* Lista */}
+      {/* List */}
       <div className="space-y-2">
         {items.map(item => (
-          <div key={item.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <button className="w-full flex items-center gap-2 px-3 py-3 text-left border-b border-gray-100"
-              onClick={() => handleEdit(item)}>
+          <div key={item.id} className="bg-white rounded-xl shadow-sm p-3">
+            <div className="flex items-start justify-between mb-2">
               <div className="flex-1">
-                <div className="font-semibold text-sm text-gray-900">{item.obra}</div>
-                <div className="text-xs text-gray-400">{item.ambiente} · {item.responsavel || '—'}</div>
+                <p className="font-bold text-sm text-navy">{item.obra}</p>
+                <p className="text-xs text-gray-500">{item.ambiente}</p>
               </div>
-              <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
-                item.status === 'concluido' ? 'bg-green-100 text-green-700' :
-                item.status === 'em_espera' ? 'bg-amber-100 text-amber-700' :
-                'bg-blue-100 text-blue-700'
-              }`}>
-                {item.status === 'concluido' ? 'Concluído' : item.status === 'em_espera' ? 'Espera' : 'Progresso'}
-              </span>
-            </button>
-            <div className="px-3 py-2 bg-gray-50 text-xs space-y-1">
-              <div className="grid grid-cols-4 gap-2">
-                <div>Modelagem: <span className="font-bold">{calcularDias(item.inicio_modelagem, item.fim_modelagem)}d</span></div>
-                <div>Alteração: <span className="font-bold">{calcularDias(item.solicitacao_alteracao, item.entrega_alteracao)}d</span></div>
-                <div>Técnico: <span className="font-bold">{calcularDias(item.inicio_caderno_tecnico, item.fim_caderno_tecnico)}d</span></div>
-              </div>
-              {item.observacoes && <div className="text-gray-600">{item.observacoes}</div>}
-              <div className="flex gap-2 mt-2">
+              <div className="flex gap-1">
                 <button onClick={() => handleEdit(item)}
-                  className="px-2 py-1 rounded text-xs font-bold border border-gray-300 text-gray-600 active:opacity-80">
-                  Editar
-                </button>
+                  className="px-2 py-1 text-xs font-bold bg-blue-100 text-blue-600 rounded-md">Edit</button>
                 <button onClick={() => handleDelete(item.id)}
-                  className="px-2 py-1 rounded text-xs font-bold border border-red-300 text-red-600 active:opacity-80">
-                  Remover
-                </button>
+                  className="px-2 py-1 text-xs font-bold bg-red-100 text-red-600 rounded-md">Del</button>
               </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              {tempoModelagem !== '—' && (
+                <div className="bg-blue-50 p-2 rounded">
+                  <p className="text-gray-400 text-[10px]">Modelagem</p>
+                  <p className="font-bold text-blue-600">{tempoModelagem}d</p>
+                </div>
+              )}
+              {tempoAlteracao !== '—' && (
+                <div className="bg-yellow-50 p-2 rounded">
+                  <p className="text-gray-400 text-[10px]">Alteração</p>
+                  <p className="font-bold text-yellow-600">{tempoAlteracao}d</p>
+                </div>
+              )}
+              {tempoTecnico !== '—' && (
+                <div className="bg-purple-50 p-2 rounded">
+                  <p className="text-gray-400 text-[10px]">Caderno</p>
+                  <p className="font-bold text-purple-600">{tempoTecnico}d</p>
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -1394,7 +1394,7 @@ export default function CoordenadoresPage() {
   const TABS = isProj ? [
     { id: 'caderno', label: 'Caderno', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4"/></svg> },
     { id: 'tecnico', label: 'Técnico', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg> },
-    { id: 'gestao', label: 'Gestão', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4"/></svg> },
+    { id: 'gestao',  label: 'Gestão',  icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M12 9v6m-3-3h6"/></svg> },
     { id: 'termo',   label: 'Termo',   icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 12l2 2 4-4M7 7H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-2M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg> },
     ATA_TAB,
   ] : [
