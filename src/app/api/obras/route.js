@@ -20,7 +20,7 @@ async function fetchClickUpObras() {
   const token = process.env.CLICKUP_TOKEN;
   if (!token) return [];
   try {
-    const url = `https://api.clickup.com/api/v2/list/${CU_LIST}/task?statuses[]=pagamento%20aprovado&include_closed=false&page=0`;
+    const url = `https://api.clickup.com/api/v2/list/${CU_LIST}/task?statuses[]=pagamento%20fechado&include_closed=false&page=0`;
     const res = await fetch(url, { headers: { Authorization: token } });
     if (!res.ok) return [];
     const { tasks } = await res.json();

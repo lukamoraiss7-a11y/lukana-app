@@ -899,6 +899,10 @@ function GestaoObraTab({ obras }) {
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({});
+  const [showImport, setShowImport] = useState(false);
+  const [availableObras, setAvailableObras] = useState([]);
+  const [selectedObraIds, setSelectedObraIds] = useState([]);
+  const [importingLoading, setImportingLoading] = useState(false);
 
   const defaultForm = {
     cliente: '',
@@ -932,6 +936,43 @@ function GestaoObraTab({ obras }) {
   useEffect(() => {
     fetchItems();
   }, []);
+
+  const fetchAvailableObras = async () => {
+    try {
+      const r = await fetch('/api/gestao-obra/import');
+      const d = await r.json();
+      setAvailableObras(Array.isArray(d) ? d : []);
+      setSelectedObraIds([]);
+    } catch {
+      setAvailableObras([]);
+    }
+  };
+
+  const handleImport = async () => {
+    if (selectedObraIds.length === 0) {
+      alert('Selecione pelo menos uma obra');
+      return;
+    }
+    setImportingLoading(true);
+    try {
+      const r = await fetch('/api/gestao-obra/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ obraIds: selectedObraIds }),
+      });
+      if (r.ok) {
+        const res = await r.json();
+        alert(res.message || 'Obras importadas com sucesso');
+        setShowImport(false);
+        fetchItems();
+        setAvailableObras([]);
+      }
+    } catch {
+      alert('Erro ao importar obras');
+    } finally {
+      setImportingLoading(false);
+    }
+  };
 
   const resetForm = () => {
     setFormData(defaultForm);
@@ -1013,12 +1054,60 @@ function GestaoObraTab({ obras }) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs text-gray-400 uppercase tracking-wide font-bold">{items.length} obra{items.length !== 1 ? 's' : ''}</p>
-        <button onClick={() => { resetForm(); setShowForm(!showForm); }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-gold text-navy">
-          <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-          Novo
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => { fetchAvailableObras(); setShowImport(true); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-blue-100 text-blue-600">
+            <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/></svg>
+            Importar
+          </button>
+          <button onClick={() => { resetForm(); setShowForm(!showForm); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-gold text-navy">
+            <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Novo
+          </button>
+        </div>
       </div>
+
+      {/* Import Modal */}
+      {showImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl mx-4 max-h-80 overflow-y-auto">
+            <h3 className="text-lg font-bold text-navy mb-4">Importar Obras do ClickUp</h3>
+            {availableObras.length === 0 ? (
+              <p className="text-sm text-gray-500 py-8 text-center">Nenhuma obra disponível para importar</p>
+            ) : (
+              <div className="space-y-2 mb-4">
+                {availableObras.map((obra) => (
+                  <label key={obra.id} className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" checked={selectedObraIds.includes(obra.id)} onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedObraIds([...selectedObraIds, obra.id]);
+                      } else {
+                        setSelectedObraIds(selectedObraIds.filter((id) => id !== obra.id));
+                      }
+                    }} className="mt-1" />
+                    <div className="flex-1">
+                      <p className="font-bold text-sm text-navy">{obra.nome}</p>
+                      <p className="text-xs text-gray-500">{obra.ambientes?.length > 0 ? obra.ambientes.join(', ') : 'Sem ambientes definidos'}</p>
+                      {obra.prazo && <p className="text-xs text-gray-400">Prazo: {obra.prazo}</p>}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2 justify-end pt-4 border-t">
+              <button onClick={() => { setShowImport(false); setAvailableObras([]); }}
+                className="px-4 py-2 text-xs font-bold rounded-lg bg-gray-200 text-gray-600">
+                Cancelar
+              </button>
+              <button onClick={handleImport} disabled={importingLoading || selectedObraIds.length === 0}
+                className="px-4 py-2 text-xs font-bold rounded-lg bg-gold text-navy disabled:opacity-50">
+                {importingLoading ? 'Importando...' : `Importar (${selectedObraIds.length})`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Form */}
       {showForm && (
