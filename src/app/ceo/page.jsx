@@ -1712,7 +1712,7 @@ export default function CeoPage() {
                   const dia = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
                   const roleLabels = {
                     diretor: 'Diretor', gerente: 'Gerente',
-                    coordenador_obra: 'Coord. Obra', coordenador_projetos: 'Coord. Projetos',
+                    coordenador_obra: 'Coord. Obra', coordenador_projetos: 'Gestor Escrit.',
                     encarregado: 'Encarregado', marceneiro: 'Marceneiro',
                     montador: 'Montador', auxiliar: 'Auxiliar', cnc: 'Op. CNC',
                   };

@@ -90,7 +90,7 @@ function ArielLogin({ onSuccess }) {
 // Coordenador: escolhe cargo + nome + senha
 const COORD_ROLES = [
   { value: 'coordenador_obra',     label: 'Coordenador de Obra'     },
-  { value: 'coordenador_projetos', label: 'Coordenador de Projetos' },
+  { value: 'coordenador_projetos', label: 'Gestor de Escritório' },
   { value: 'encarregado',          label: 'Encarregado'             },
 ];
 

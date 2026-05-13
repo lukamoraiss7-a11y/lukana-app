@@ -37,7 +37,7 @@ export default function Home() {
           href="/login?next=/coordenadores&role=coordenador_projetos"
           className="block w-full py-4 rounded-2xl text-center font-bold text-base text-white border-2 border-white/30 bg-white/5 active:opacity-80 transition-opacity"
         >
-          Coord. de Projetos
+          Gestor de Escritório
         </Link>
         <Link
           href="/equipe"

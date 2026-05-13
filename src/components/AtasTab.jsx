@@ -7,7 +7,7 @@ const MAX_ANEXO_BYTES = 500 * 1024; // 500 KB
 const EQUIPE_LABEL = {
   gerente: 'Gerente de Fábrica',
   coordenador_obra: 'Coordenação de Obra',
-  coordenador_projetos: 'Coordenação de Projetos',
+  coordenador_projetos: 'Gestão de Escritório',
 };
 
 const fmtDate = (s) => {
