@@ -13,15 +13,11 @@ export async function GET() {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const event = {
-      id: Date.now().toString(),
-      nome: body.nome || 'Desconhecido',
-      role: body.role || 'unknown',
-      timestamp: body.timestamp || new Date().toISOString(),
-    };
-    await addLoginEvent(event);
-    // Atualizar atividade do usuário
-    await updateUserActivity(event.id, event.nome, event.role);
+    const nome = body.nome || 'Desconhecido';
+    const role = body.role || 'unknown';
+    // Chave estável: não cria duplicatas — upsert por role+nome
+    const stableKey = `${role}_${nome.toLowerCase().replace(/\s+/g, '_')}`;
+    await updateUserActivity(stableKey, nome, role);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });

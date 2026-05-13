@@ -1061,6 +1061,104 @@ function DateNav({ histKey, viewDate, setViewDate }) {
   );
 }
 
+// ── RESUMO DIÁRIO POR ÁREA ─────────────────────────────────────────────────
+function BarEvol({ aFazer, andamento, finalizado, total }) {
+  if (total === 0) return <p className="text-xs text-gray-400 italic mt-1">Sem dados</p>;
+  const pct = (n) => Math.max(0, Math.round((n / total) * 100));
+  return (
+    <div className="mt-2">
+      <div className="flex rounded-full overflow-hidden h-2 gap-0.5 bg-gray-100">
+        {finalizado > 0 && <div style={{ width: `${pct(finalizado)}%` }} className="bg-green-400" />}
+        {andamento  > 0 && <div style={{ width: `${pct(andamento)}%`  }} className="bg-amber-400" />}
+        {aFazer     > 0 && <div style={{ width: `${pct(aFazer)}%`     }} className="bg-gray-200" />}
+      </div>
+      <div className="flex gap-3 mt-1">
+        <span className="text-[10px] font-semibold text-green-500">✓ {finalizado} finalizados</span>
+        <span className="text-[10px] font-semibold text-amber-500">⟳ {andamento} andamento</span>
+        <span className="text-[10px] font-semibold text-gray-400">○ {aFazer} a fazer</span>
+      </div>
+    </div>
+  );
+}
+
+function ResumoDiario({ gerenteFab, resumoObra, resumoEscritorio }) {
+  // ── Fábrica (Matheus) ──
+  const fabSaem    = (gerenteFab?.gf4 || []).length;
+  const fabAmanha  = (gerenteFab?.gf3 || []).length;
+  const fabProd    = gerenteFab?.gf1?.obra || gerenteFab?.gf1?.descricao ? 1 : 0;
+  const fabBloq    = [gerenteFab?.gf2, gerenteFab?.gf5, gerenteFab?.gf6]
+    .filter(f => f?.status === 'sim' || f?.status === 'outro').length;
+  const fabTotal   = fabSaem + fabAmanha + fabProd;
+  const fabHora    = gerenteFab?.saved_at ? (() => {
+    const d = new Date(gerenteFab.saved_at);
+    return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  })() : null;
+
+  // ── Obras (Vinny) ──
+  const obraTotal  = resumoObra.length;
+  const obraFin    = resumoObra.filter(o => ['finalizado','concluido'].includes(o.status)).length;
+  const obraAnd    = resumoObra.filter(o => o.status === 'em_progresso').length;
+  const obraAF     = obraTotal - obraFin - obraAnd;
+
+  // ── Escritório (Ana) ──
+  const projTotal  = resumoEscritorio.length;
+  const projFin    = resumoEscritorio.filter(i => i.envio_fabrica || i.status === 'concluido').length;
+  const projAnd    = resumoEscritorio.filter(i => i.medicao && !i.envio_fabrica && i.status !== 'concluido').length;
+  const projAF     = projTotal - projFin - projAnd;
+
+  return (
+    <div className="space-y-2 mb-4">
+      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide px-1">Evolução do dia</p>
+
+      {/* Fábrica */}
+      <div className="bg-white rounded-xl shadow-sm px-4 py-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-gray-700">🏭 Fábrica · Matheus</span>
+          <span className="text-[10px] text-gray-400">
+            {gerenteFab ? (fabHora ? `às ${fabHora}` : 'preenchido') : 'não preencheu'}
+          </span>
+        </div>
+        {!gerenteFab ? (
+          <p className="text-xs text-gray-400 italic mt-1">Aguardando preenchimento.</p>
+        ) : (
+          <>
+            {gerenteFab.gf1?.obra && (
+              <p className="text-xs text-gray-600 mt-1">
+                <span className="font-semibold">Em produção:</span> {gerenteFab.gf1.obra}{gerenteFab.gf1.ambiente ? ` · ${gerenteFab.gf1.ambiente}` : ''}
+              </p>
+            )}
+            <BarEvol aFazer={fabAmanha} andamento={fabProd} finalizado={fabSaem} total={fabTotal || 1} />
+            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+              <span className="text-[10px] font-semibold text-green-500">↑ Saem hoje: {fabSaem}</span>
+              <span className="text-[10px] font-semibold text-amber-500">⟳ Produzindo: {fabProd}</span>
+              <span className="text-[10px] font-semibold text-gray-400">→ Amanhã: {fabAmanha}</span>
+              {fabBloq > 0 && <span className="text-[10px] font-semibold text-red-500">⚠ Bloqueios: {fabBloq}</span>}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Obras */}
+      <div className="bg-white rounded-xl shadow-sm px-4 py-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-gray-700">🏗️ Obras · Vinny</span>
+          <span className="text-[10px] text-gray-400">{obraTotal} ambientes</span>
+        </div>
+        <BarEvol aFazer={obraAF} andamento={obraAnd} finalizado={obraFin} total={obraTotal} />
+      </div>
+
+      {/* Escritório */}
+      <div className="bg-white rounded-xl shadow-sm px-4 py-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-gray-700">📐 Escritório · Ana</span>
+          <span className="text-[10px] text-gray-400">{projTotal} projetos</span>
+        </div>
+        <BarEvol aFazer={projAF} andamento={projAnd} finalizado={projFin} total={projTotal} />
+      </div>
+    </div>
+  );
+}
+
 // ── PÁGINA PRINCIPAL DIRETOR ───────────────────────────────────────────────
 export default function CeoPage() {
   const router = useRouter();
@@ -1093,6 +1191,8 @@ export default function CeoPage() {
   const [notasDate, setNotasDate] = useState(today());
   const [gerenteFab, setGerenteFab] = useState(null);
   const [loadingFab, setLoadingFab] = useState(false);
+  const [resumoObra, setResumoObra] = useState([]);
+  const [resumoEscritorio, setResumoEscritorio] = useState([]);
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2000); };
 
   const handleLogout = () => {
@@ -1253,16 +1353,16 @@ export default function CeoPage() {
     finally { setLoadingCnc(false); }
   }, []);
 
-  // Ajustar aba quando viewMode muda
+  // Ajustar aba quando viewMode muda (Resumo do Dia disponível para ambos)
   useEffect(() => {
-    if (viewMode === 'diretor' && ['meudia'].includes(activeTab)) {
+    if (viewMode === 'diretor' && activeTab === 'equipe') {
       setActiveTab('acompanhamento');
     }
   }, [viewMode, activeTab]);
 
-  // Sincroniza equipeDate com viewDate quando está no Meu Dia
+  // Sincroniza equipeDate com viewDate quando está no Resumo do Dia
   useEffect(() => { if (activeTab === 'meudia') setEquipeDate(viewDate); }, [viewDate, activeTab]);
-  useEffect(() => { if (auth && (activeTab === 'equipe' || activeTab === 'meudia')) fetchEquipe(equipeDate); }, [auth, activeTab, equipeDate, fetchEquipe]);
+  useEffect(() => { if (auth && activeTab === 'meudia') fetchEquipe(equipeDate); }, [auth, activeTab, equipeDate, fetchEquipe]);
   useEffect(() => { if (auth && activeTab === 'cnc') fetchCnc(); }, [auth, activeTab, fetchCnc]);
   useEffect(() => { if (auth && activeTab === 'fabrica') fetchGerenteFab(viewFabDate); }, [auth, activeTab, viewFabDate, fetchGerenteFab]);
   useEffect(() => { if (auth && activeTab === 'acompanhamento') fetchNotas(notasDate); }, [auth, activeTab, notasDate, fetchNotas]);
@@ -1281,6 +1381,18 @@ export default function CeoPage() {
     finally { setLoadingAcessos(false); }
   }, []);
 
+  const fetchResumo = useCallback(async () => {
+    try {
+      const [oRes, eRes] = await Promise.all([
+        fetch('/api/gestao-obra').then(r => r.json()),
+        fetch('/api/gestao-escritorio').then(r => r.json()),
+      ]);
+      setResumoObra(Array.isArray(oRes) ? oRes : []);
+      setResumoEscritorio(Array.isArray(eRes) ? eRes : []);
+    } catch { /* silencioso */ }
+  }, []);
+
+  useEffect(() => { if (auth && activeTab === 'meudia') { fetchGerenteFab(today()); fetchResumo(); } }, [auth, activeTab, fetchGerenteFab, fetchResumo]);
   useEffect(() => { if (auth && activeTab === 'pedidos') fetchPedidos(); }, [auth, activeTab, fetchPedidos]);
   useEffect(() => { if (auth && activeTab === 'obras') fetchObras(); }, [auth, activeTab, fetchObras]);
   useEffect(() => {
@@ -1343,9 +1455,8 @@ export default function CeoPage() {
 
   const ALL_TABS = [
     { id: 'acompanhamento', label: 'Acompanhamento', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 6h.01M12 16h.01"/></svg> },
-    { id: 'meudia',  label: 'Meu Dia', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg> },
+    { id: 'meudia',  label: 'Resumo do Dia', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg> },
     { id: 'fabrica', label: 'Fábrica',  icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M3 9l4-4 4 4 4-4 4 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9z"/></svg> },
-    { id: 'equipe',  label: 'Equipe',   icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> },
     { id: 'projetos',label: 'Projetos', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M3 7h18M3 12h18M3 17h18"/><path d="M8 7V5a1 1 0 011-1h6a1 1 0 011 1v2"/></svg> },
     { id: 'obras',   label: 'Obras',    icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
     { id: 'cnc',     label: 'CNC',      icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8l3 3 3-3 3 3"/></svg> },
@@ -1355,10 +1466,8 @@ export default function CeoPage() {
     { id: 'atas',    label: 'Atas',    icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 6h.01M12 16h.01M16 12h.01"/></svg> },
   ];
 
-  // Filtrar TABS baseado em viewMode
-  const TABS = viewMode === 'diretor'
-    ? ALL_TABS.filter(t => !['meudia'].includes(t.id))
-    : ALL_TABS;
+  // Ambos os modos veem todas as tabs
+  const TABS = ALL_TABS;
 
   return (
     <div className="min-h-dvh flex flex-col">
@@ -1416,6 +1525,7 @@ export default function CeoPage() {
 
         {activeTab === 'meudia' && (
           <div className="px-3 py-3">
+            <ResumoDiario gerenteFab={gerenteFab} resumoObra={resumoObra} resumoEscritorio={resumoEscritorio} />
             <DateNav histKey={HIST_DIA_KEY} viewDate={viewDate} setViewDate={setViewDate} />
             {viewDate !== today() ? (
               /* Modo leitura: dia anterior */
@@ -1547,31 +1657,6 @@ export default function CeoPage() {
           </div>
         )}
 
-        {activeTab === 'equipe' && (
-          <div className="px-3 py-3">
-            <DateNavSimple viewDate={equipeDate} setViewDate={setEquipeDate} days={15} />
-            {equipeDate !== today() && (
-              <div className="mb-3 px-1 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 font-semibold text-center">
-                Visualizando {equipeDate.split('-').reverse().join('/')} · somente leitura
-              </div>
-            )}
-            <div className="flex flex-wrap gap-2 mb-3">
-              {[{v:'todos',l:'Todos'},{v:'nao',l:'Não'},{v:'outro',l:'Outro'},{v:'diretor',l:'Precisa Diretor'}].map((f) => (
-                <button key={f.v} onClick={() => setEquipeFilter(f.v)} className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${equipeFilter === f.v ? 'border-navy bg-navy text-white' : 'border-gray-200 bg-white text-gray-500'}`}>{f.l}</button>
-              ))}
-              <button onClick={() => fetchEquipe(equipeDate)} className="ml-auto px-3 py-1.5 rounded-full text-xs font-bold border-2 border-gold text-gold-d bg-white">Atualizar</button>
-            </div>
-            {loadingEquipe && <div className="text-center py-10 text-sm text-gray-400">Carregando...</div>}
-            {!loadingEquipe && filteredSubs.length === 0 && (
-              <div className="text-center py-12 text-sm text-gray-400">{submissions.length === 0 ? 'Nenhum membro preencheu neste dia.' : 'Nenhum membro com este filtro.'}</div>
-            )}
-            {!loadingEquipe && filteredSubs.map((s) => (
-              <MemberCard key={s.name} sub={s} onAction={(a, name) => {
-                if (a === 'excluir') setSubmissions((prev) => prev.filter((x) => x.name !== name));
-              }} />
-            ))}
-          </div>
-        )}
 
         {activeTab === 'projetos' && <ProjetosTab obras={obras} loading={loadingObras}
           isAriel={ceoSession?.role === 'ariel'}
