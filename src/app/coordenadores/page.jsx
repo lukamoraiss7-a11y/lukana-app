@@ -1500,7 +1500,118 @@ function GestaoObraTab({ obras }) {
   );
 }
 
-function TermoTab({ obras, session }) {
+const ENTREGA_CHECKLIST_ITEMS = [
+  'Portas alinhadas',
+  'Cantoneiras com capas',
+  'Ambiente limpo',
+  'Regulagem de ferragens',
+  'Tapa furos aplicados',
+  'Amortecedores testados',
+  'Parafusos nas dobradiças conferidos',
+  'Puxadores e alças fixos',
+  'Gavetas reguladas',
+  'Prateleiras posicionadas',
+  'Sobras e resíduos retirados',
+  'Cliente orientado sobre uso e cuidados',
+];
+
+function TermoChecklistEntrega({ obras, session }) {
+  const [obraId, setObraId]   = useState('');
+  const [checks, setChecks]   = useState({});
+  const [obs, setObs]         = useState('');
+  const [saving, setSaving]   = useState(false);
+  const [done, setDone]       = useState(false);
+
+  const checkedCount = ENTREGA_CHECKLIST_ITEMS.filter((it) => checks[it]).length;
+  const allChecked   = checkedCount === ENTREGA_CHECKLIST_ITEMS.length;
+
+  const handleSave = async () => {
+    if (!obraId) { alert('Selecione a obra.'); return; }
+    setSaving(true);
+    try {
+      const obra = obras.find((o) => o.id === obraId);
+      await fetch('/api/termos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          obra_nome: obra?.nome || obraId,
+          tipo_aceite: 'checklist_entrega',
+          checklist_entrega: checks,
+          observacoes: obs.trim(),
+          coordenador: session?.nome || '',
+        }),
+      });
+      setDone(true);
+    } catch { alert('Erro ao salvar.'); }
+    setSaving(false);
+  };
+
+  if (done) {
+    return (
+      <div className="px-4 py-8 flex flex-col items-center gap-4">
+        <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
+          <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <p className="font-bold text-navy text-lg text-center">Checklist registrado!</p>
+        <p className="text-sm text-gray-400 text-center">{checkedCount}/{ENTREGA_CHECKLIST_ITEMS.length} itens verificados</p>
+        <button onClick={() => { setDone(false); setObraId(''); setChecks({}); setObs(''); }}
+          className="w-full py-3 bg-navy text-white font-bold rounded-xl text-sm">
+          Novo Checklist
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-3 py-3 space-y-4">
+      <p className="text-xs text-gray-400 uppercase tracking-wide font-bold px-1">Checklist de Entrega</p>
+
+      <div className="bg-white rounded-xl shadow-sm p-4">
+        <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Obra *</label>
+        <select value={obraId} onChange={(e) => setObraId(e.target.value)}
+          className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-gold bg-white">
+          <option value="">— Selecione a obra —</option>
+          {obras.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
+        </select>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Itens de verificação</p>
+          <span className="text-xs font-bold text-navy">{checkedCount}/{ENTREGA_CHECKLIST_ITEMS.length}</span>
+        </div>
+        <div className="space-y-0.5">
+          {ENTREGA_CHECKLIST_ITEMS.map((item) => (
+            <button key={item} onClick={() => setChecks((c) => ({ ...c, [item]: !c[item] }))}
+              className="w-full flex items-center gap-3 text-left py-2.5 px-1 border-b border-gray-50 last:border-0">
+              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${checks[item] ? 'border-green-500 bg-green-500' : 'border-gray-300'}`}>
+                {checks[item] && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>}
+              </div>
+              <span className={`text-sm transition-colors ${checks[item] ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{item}</span>
+            </button>
+          ))}
+        </div>
+        {allChecked && (
+          <div className="mt-3 py-2 rounded-xl bg-green-50 text-center text-xs font-bold text-green-600">Todos os itens verificados ✓</div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm p-4">
+        <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Observações</label>
+        <textarea value={obs} onChange={(e) => setObs(e.target.value)} rows={3}
+          placeholder="Pendências, ressalvas, combinados com o cliente..."
+          className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-gold placeholder:text-gray-300" />
+      </div>
+
+      <button onClick={handleSave} disabled={saving || !obraId}
+        className="w-full py-3.5 bg-navy text-white font-bold rounded-xl text-sm disabled:opacity-50">
+        {saving ? 'Salvando...' : 'Salvar Checklist'}
+      </button>
+    </div>
+  );
+}
+
+function TermoRecebimento({ obras, session }) {
   const [cliente, setCliente] = useState('');
   const [obraId, setObraId]   = useState('');
   const [tipoAceite, setTipoAceite] = useState('');
@@ -1684,6 +1795,13 @@ function TermoTab({ obras, session }) {
       </button>
     </div>
   );
+}
+
+function TermoTab({ obras, session }) {
+  if (['coordenador_obra', 'encarregado'].includes(session?.role)) {
+    return <TermoChecklistEntrega obras={obras} session={session} />;
+  }
+  return <TermoRecebimento obras={obras} session={session} />;
 }
 
 // ── Registros tab ──────────────────────────────────────────────────────────
@@ -1878,10 +1996,13 @@ export default function CoordenadoresPage() {
   const [ambientesVistoria, setAmbientesVistoria] = useState([]);
   const [ambienteOutro, setAmbienteOutro] = useState('');
   const [savingVistoria, setSavingVistoria] = useState(false);
-  // Foto (agora dentro da vistoria)
+  // Foto vistoria
   const [fotoFile, setFotoFile] = useState(null);
   const [fotoData, setFotoData] = useState(null);
   const [uploadingFoto, setUploadingFoto] = useState(false);
+  // Foto nota (Atualização de Obra)
+  const [notaFotoFile, setNotaFotoFile] = useState(null);
+  const [notaFotoData, setNotaFotoData] = useState(null);
   const [saving, setSaving]   = useState(false);
   const [toast, setToast]     = useState('');
 
@@ -1930,6 +2051,14 @@ export default function CoordenadoresPage() {
     try {
       const obraObj = obras.find(o => o.id === obraNota);
       await fetch('/api/notas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ autor: session.nome, texto, tipo, obra_id: obraNota, obra_nome: obraObj?.nome, role: session?.role }) });
+      if (notaFotoFile) {
+        const form = new FormData();
+        form.append('task_id', obraNota);
+        form.append('file', notaFotoFile);
+        await fetch('/api/attachment', { method: 'POST', body: form });
+        setNotaFotoFile(null);
+        setNotaFotoData(null);
+      }
       setTexto('');
       setObraNota('');
       const r = await fetch(`/api/notas?date=${today()}`);
@@ -2055,10 +2184,87 @@ export default function CoordenadoresPage() {
               <textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={2}
                 placeholder="O que aconteceu? Bloqueio, evolução, observação..."
                 className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-gold placeholder:text-gray-300 mb-3" />
+              {/* Foto */}
+              <div className="mb-3">
+                {notaFotoData ? (
+                  <div className="relative inline-block">
+                    <img src={notaFotoData} alt="foto" className="h-20 w-20 object-cover rounded-xl border-2 border-gold" />
+                    <button type="button" onClick={() => { setNotaFotoFile(null); setNotaFotoData(null); }}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center font-bold">×</button>
+                  </div>
+                ) : (
+                  <label className="flex items-center gap-2 w-fit cursor-pointer text-xs font-bold text-gray-400 border-2 border-dashed border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50 hover:border-gold transition-colors">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    Foto
+                    <input type="file" accept="image/*" capture="environment" className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        setNotaFotoFile(f);
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setNotaFotoData(ev.target.result);
+                        reader.readAsDataURL(f);
+                        e.target.value = '';
+                      }} />
+                  </label>
+                )}
+              </div>
               <button onClick={handleAddNota} disabled={saving || !obraNota}
                 className="w-full py-2.5 bg-gold text-navy font-bold rounded-xl text-sm disabled:opacity-50">
                 {saving ? 'Salvando...' : 'Registrar nota'}
               </button>
+            </div>
+
+            {/* Registro de Vistoria */}
+            <div className="bg-white rounded-xl shadow-sm p-4 mb-4">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Registro de Vistoria</p>
+              <select value={obraVistoria} onChange={(e) => setObraVistoria(e.target.value)}
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gold mb-3 text-gray-700">
+                <option value="">— Selecione a obra —</option>
+                {obras.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
+              </select>
+              {obraVistoria && (
+                <>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Ambientes</p>
+                  <AmbientesPicker selected={ambientesVistoria} onChange={setAmbientesVistoria} />
+                  {ambientesVistoria.includes('__outro__') && (
+                    <input value={ambienteOutro} onChange={(e) => setAmbienteOutro(e.target.value)}
+                      placeholder="Qual ambiente?" autoCapitalize="words"
+                      className="w-full mt-2 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gold" />
+                  )}
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mt-3 mb-1">Checklist</p>
+                  <CoordChecklist checklist={checklist} setChecklist={setChecklist} />
+                  {/* Foto */}
+                  <div className="mb-3">
+                    {fotoData ? (
+                      <div className="relative inline-block">
+                        <img src={fotoData} alt="foto" className="h-20 w-20 object-cover rounded-xl border-2 border-gold" />
+                        <button type="button" onClick={() => { setFotoFile(null); setFotoData(null); }}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center font-bold">×</button>
+                      </div>
+                    ) : (
+                      <label className="flex items-center gap-2 w-fit cursor-pointer text-xs font-bold text-gray-400 border-2 border-dashed border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50 hover:border-gold transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        Foto
+                        <input type="file" accept="image/*" capture="environment" className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (!f) return;
+                            setFotoFile(f);
+                            const reader = new FileReader();
+                            reader.onload = (ev) => setFotoData(ev.target.result);
+                            reader.readAsDataURL(f);
+                            e.target.value = '';
+                          }} />
+                      </label>
+                    )}
+                  </div>
+                  <button onClick={handleVistoria} disabled={savingVistoria}
+                    className="w-full py-2.5 bg-navy text-white font-bold rounded-xl text-sm disabled:opacity-50">
+                    {savingVistoria ? 'Registrando...' : 'Registrar Vistoria'}
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Timeline */}
