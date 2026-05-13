@@ -604,27 +604,25 @@ function CadernoTab({ obras, session }) {
 function GestaoEscritorioTab({ obras }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({});
+  const [showDesignarModal, setShowDesignarModal] = useState(false);
+  const [pessoaSelecionada, setPessoaSelecionada] = useState(null);
+  const [autoImportando, setAutoImportando] = useState(false);
+
+  const EQUIPE_ESC = ['Munyke', 'Ana', 'Aline', 'Letícia', 'Mariana'];
 
   const defaultForm = {
     obra: '',
     ambiente: '',
     responsavel: '',
-    medicao: '',
     inicio_modelagem: '',
     fim_modelagem: '',
-    apresentacao_cliente: '',
-    aprovacao_cliente: '',
-    solicitacao_alteracao: '',
-    entrega_alteracao: '',
-    aprovacao_final: '',
+    data_limite_modelagem: '',
     inicio_caderno_tecnico: '',
     fim_caderno_tecnico: '',
-    revisao: '',
-    envio_fabrica: '',
+    data_limite_tecnico: '',
     status: 'em_progresso',
     observacoes: '',
     equipe_escritorio: [],
@@ -636,6 +634,38 @@ function GestaoEscritorioTab({ obras }) {
       const r = await fetch('/api/gestao-escritorio');
       const d = await r.json();
       setItems(Array.isArray(d) ? d : []);
+
+      // Auto-import de projetos novos do ClickUp
+      if (obras.length > 0) {
+        const obrasNaoImportadas = obras.filter(obra =>
+          !d.some(item => item.obra === obra.nome)
+        );
+
+        if (obrasNaoImportadas.length > 0) {
+          setAutoImportando(true);
+          for (const obra of obrasNaoImportadas) {
+            const ambientes = obra.ambientes?.length > 0 ? obra.ambientes : ['Geral'];
+            for (const ambiente of ambientes) {
+              await fetch('/api/gestao-escritorio', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  obra: obra.nome,
+                  ambiente: ambiente,
+                  responsavel: '',
+                  status: 'em_progresso',
+                  equipe_escritorio: [],
+                })
+              });
+            }
+          }
+          // Recarregar após import
+          const r2 = await fetch('/api/gestao-escritorio');
+          const d2 = await r2.json();
+          setItems(Array.isArray(d2) ? d2 : []);
+          setAutoImportando(false);
+        }
+      }
     } catch {
       setItems([]);
     } finally {
@@ -645,7 +675,7 @@ function GestaoEscritorioTab({ obras }) {
 
   useEffect(() => {
     fetchItems();
-  }, []);
+  }, [obras]);
 
   const resetForm = () => {
     setFormData(defaultForm);
@@ -712,10 +742,6 @@ function GestaoEscritorioTab({ obras }) {
     }
   };
 
-  const EQUIPE_ESC = ['Munyke', 'Ana', 'Aline', 'Letícia', 'Mariana'];
-  const [showDesignarModal, setShowDesignarModal] = useState(false);
-  const [pessoaSelecionada, setPessoaSelecionada] = useState(null);
-
   const calcularDias = (dataInicio, dataFim) => {
     if (!dataInicio || !dataFim) return 0;
     const d1 = new Date(dataInicio);
@@ -768,29 +794,59 @@ function GestaoEscritorioTab({ obras }) {
                 className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold" />
             </div>
 
+            {/* Modelagem */}
             <div className="pt-2 border-t border-gray-100">
-              <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Datas importantes</p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                {[
-                  { key: 'medicao', label: 'Medição' },
-                  { key: 'inicio_modelagem', label: 'Início Modelagem' },
-                  { key: 'fim_modelagem', label: 'Fim Modelagem' },
-                  { key: 'apresentacao_cliente', label: 'Apresentação' },
-                  { key: 'aprovacao_cliente', label: 'Aprovação Cliente' },
-                  { key: 'solicitacao_alteracao', label: 'Sol. Alteração' },
-                  { key: 'entrega_alteracao', label: 'Ent. Alteração' },
-                  { key: 'aprovacao_final', label: 'Aprovação Final' },
-                  { key: 'inicio_caderno_tecnico', label: 'Início Caderno' },
-                  { key: 'fim_caderno_tecnico', label: 'Fim Caderno' },
-                  { key: 'revisao', label: 'Revisão' },
-                  { key: 'envio_fabrica', label: 'Envio Fábrica' },
-                ].map(({ key, label }) => (
-                  <div key={key}>
-                    <label className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">{label}</label>
-                    <input type="date" value={formData[key] || ''} onChange={(e) => setFormData({...formData, [key]: e.target.value})}
-                      className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-gold" />
+              <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Modelagem</p>
+              <div className="grid grid-cols-4 gap-2 text-xs">
+                <div>
+                  <label className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Início</label>
+                  <input type="date" value={formData.inicio_modelagem || ''} onChange={(e) => setFormData({...formData, inicio_modelagem: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-gold" />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Fim</label>
+                  <input type="date" value={formData.fim_modelagem || ''} onChange={(e) => setFormData({...formData, fim_modelagem: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-gold" />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Dias</label>
+                  <div className="w-full border-2 border-blue-200 bg-blue-50 rounded-lg px-2 py-1 text-blue-600 font-bold">
+                    {calcularDias(formData.inicio_modelagem, formData.fim_modelagem)}d
                   </div>
-                ))}
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Alvo</label>
+                  <input type="date" value={formData.data_limite_modelagem || ''} onChange={(e) => setFormData({...formData, data_limite_modelagem: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-gold" />
+                </div>
+              </div>
+            </div>
+
+            {/* Caderno Técnico */}
+            <div className="pt-2">
+              <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Caderno Técnico</p>
+              <div className="grid grid-cols-4 gap-2 text-xs">
+                <div>
+                  <label className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Início</label>
+                  <input type="date" value={formData.inicio_caderno_tecnico || ''} onChange={(e) => setFormData({...formData, inicio_caderno_tecnico: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-gold" />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Fim</label>
+                  <input type="date" value={formData.fim_caderno_tecnico || ''} onChange={(e) => setFormData({...formData, fim_caderno_tecnico: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-gold" />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Dias</label>
+                  <div className="w-full border-2 border-purple-200 bg-purple-50 rounded-lg px-2 py-1 text-purple-600 font-bold">
+                    {calcularDias(formData.inicio_caderno_tecnico, formData.fim_caderno_tecnico)}d
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Alvo</label>
+                  <input type="date" value={formData.data_limite_tecnico || ''} onChange={(e) => setFormData({...formData, data_limite_tecnico: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-gold" />
+                </div>
               </div>
             </div>
 
@@ -1949,7 +2005,6 @@ export default function CoordenadoresPage() {
     ATA_TAB,
   ] : isProj ? [
     { id: 'caderno', label: 'Caderno', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4"/></svg> },
-    { id: 'tecnico', label: 'Técnico', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg> },
     { id: 'gestao',  label: 'Gestão',  icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M12 9v6m-3-3h6"/></svg> },
     { id: 'termo',   label: 'Termo',   icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 12l2 2 4-4M7 7H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-2M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg> },
     ATA_TAB,
