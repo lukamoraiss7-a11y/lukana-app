@@ -20,45 +20,53 @@ function parseAmbientes(text) {
     .filter((l) => { if (seen.has(l)) return false; seen.add(l); return true; });
 }
 
+async function fetchSubtasks(token, taskId) {
+  try {
+    const res = await fetch(
+      `https://api.clickup.com/api/v2/task/${taskId}?include_subtasks=true`,
+      { headers: { Authorization: token } }
+    );
+    if (!res.ok) return [];
+    const { subtasks } = await res.json();
+    return (subtasks || [])
+      .map((s) => s.name?.trim())
+      .filter((name) => name && !FURNITURE_RE.test(name) && name.length < 60);
+  } catch { return []; }
+}
+
 async function fetchClickUpObras() {
   const token = process.env.CLICKUP_TOKEN;
   if (!token) return [];
   try {
-    // Busca até 3 páginas SEM filtro de status na URL para que subtarefas
-    // (que têm status próprio diferente de "pagamento fechado") também sejam retornadas.
-    // Filtramos as tarefas principais por status no código.
-    const allTasks = [];
+    // 1. Busca tarefas principais com status "pagamento fechado"
+    const mainTasks = [];
     for (let page = 0; page < 3; page++) {
-      const url = `https://api.clickup.com/api/v2/list/${CU_LIST}/task?include_closed=false&subtasks=true&page=${page}`;
+      const url = `https://api.clickup.com/api/v2/list/${CU_LIST}/task?statuses[]=pagamento%20fechado&include_closed=false&page=${page}`;
       const res = await fetch(url, { headers: { Authorization: token } });
       if (!res.ok) break;
       const { tasks } = await res.json();
       if (!tasks || tasks.length === 0) break;
-      allTasks.push(...tasks);
-      if (tasks.length < 100) break; // última página
+      mainTasks.push(...tasks);
+      if (tasks.length < 100) break;
     }
-    if (allTasks.length === 0) return [];
+    if (mainTasks.length === 0) return [];
 
-    // Separa tarefas principais com status "pagamento fechado" de sub-tarefas
-    const mainTasks = allTasks.filter((t) => !t.parent && t.status?.status?.toLowerCase() === 'pagamento fechado');
-    const subTasks  = allTasks.filter((t) =>  t.parent);
+    // 2. Para cada tarefa, busca subtarefas individualmente (evita problema de paginação)
+    const results = await Promise.all(
+      mainTasks.map(async (t) => ({
+        id: t.id,
+        nome: t.name,
+        prazo: t.due_date ? new Date(parseInt(t.due_date)).toISOString().slice(0, 10) : null,
+        ambientes: await fetchSubtasks(token, t.id),
+      }))
+    );
 
-    // Agrupa subtarefas pelo parent id, filtrando nomes que não são ambientes
-    const subByParent = {};
-    subTasks.forEach((s) => {
-      const name = s.name?.trim();
-      if (!name || FURNITURE_RE.test(name) || name.length > 60) return;
-      if (!subByParent[s.parent]) subByParent[s.parent] = [];
-      subByParent[s.parent].push(name);
-    });
-
-    return mainTasks.map((t) => ({
-      id: t.id,
-      nome: t.name,
-      prazo: t.due_date ? new Date(parseInt(t.due_date)).toISOString().slice(0, 10) : null,
-      ambientes: subByParent[t.id]?.length > 0
-        ? subByParent[t.id]
-        : parseAmbientes(t.text_content || t.description || ''),
+    // Fallback para text_content se nenhuma subtarefa válida retornou
+    return results.map((r) => ({
+      ...r,
+      ambientes: r.ambientes.length > 0
+        ? r.ambientes
+        : parseAmbientes(mainTasks.find((t) => t.id === r.id)?.text_content || ''),
     }));
   } catch { return []; }
 }
