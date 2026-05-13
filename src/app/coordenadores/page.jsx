@@ -1174,6 +1174,7 @@ function GestaoHeadTab() {
 function GestaoObraTab({ obras }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedObra, setSelectedObra] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -1182,6 +1183,22 @@ function GestaoObraTab({ obras }) {
   const [availableObras, setAvailableObras] = useState([]);
   const [selectedObraIds, setSelectedObraIds] = useState([]);
   const [importingLoading, setImportingLoading] = useState(false);
+
+  // Agrupa itens por obra
+  const obraGroups = useMemo(() => {
+    const groups = {};
+    items.forEach((item) => {
+      const key = item.obra || 'Sem obra';
+      if (!groups[key]) groups[key] = { obra: key, cliente: item.cliente, items: [] };
+      groups[key].items.push(item);
+    });
+    return Object.values(groups).sort((a, b) => a.obra.localeCompare(b.obra));
+  }, [items]);
+
+  const selectedObraItems = useMemo(
+    () => (selectedObra ? items.filter((i) => i.obra === selectedObra) : []),
+    [selectedObra, items]
+  );
 
   const defaultForm = {
     cliente: '',
@@ -1259,10 +1276,12 @@ function GestaoObraTab({ obras }) {
   };
 
   const handleSave = async () => {
-    if (!formData.cliente || !formData.obra) {
-      alert('Preencha Cliente e Obra');
+    const obraFinal = selectedObra || formData.obra;
+    if (!obraFinal) {
+      alert('Informe a obra');
       return;
     }
+    const payload = { ...formData, obra: obraFinal };
 
     setSaving(true);
     try {
@@ -1270,18 +1289,18 @@ function GestaoObraTab({ obras }) {
         const r = await fetch('/api/gestao-obra', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: editId, ...formData }),
+          body: JSON.stringify({ id: editId, ...payload }),
         });
         if (r.ok) {
           setItems(prev =>
-            prev.map(i => i.id === editId ? { ...i, ...formData } : i)
+            prev.map(i => i.id === editId ? { ...i, ...payload } : i)
           );
         }
       } else {
         const r = await fetch('/api/gestao-obra', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         });
         const res = await r.json();
         if (r.ok) {
@@ -1305,7 +1324,7 @@ function GestaoObraTab({ obras }) {
   };
 
   const dashboardData = {
-    totalObras: items.length,
+    totalObras: obraGroups.length,
     totalRetrabalhos: items.reduce((sum, item) => sum + (parseInt(item.retrabalhos) || 0), 0),
     mediaQualidade: items.length > 0 ? Math.round(items.reduce((sum, item) => sum + (parseInt(item.qualidade) || 0), 0) / items.length) : 0,
   };
@@ -1332,20 +1351,29 @@ function GestaoObraTab({ obras }) {
 
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-gray-400 uppercase tracking-wide font-bold">{items.length} obra{items.length !== 1 ? 's' : ''}</p>
+        <p className="text-xs text-gray-400 uppercase tracking-wide font-bold">{obraGroups.length} obra{obraGroups.length !== 1 ? 's' : ''}</p>
         <div className="flex gap-2">
           <button onClick={() => { fetchAvailableObras(); setShowImport(true); }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-blue-100 text-blue-600">
             <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/></svg>
             Importar
           </button>
-          <button onClick={() => { resetForm(); setShowForm(!showForm); }}
+          <button onClick={() => { resetForm(); setFormData(prev => ({ ...prev, obra: selectedObra })); setShowForm(!showForm); }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-gold text-navy">
             <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
             Novo
           </button>
         </div>
       </div>
+
+      {/* Seletor de obra */}
+      <select value={selectedObra} onChange={(e) => { setSelectedObra(e.target.value); setShowForm(false); }}
+        className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gold mb-3 text-gray-700">
+        <option value="">— Selecione uma obra —</option>
+        {obraGroups.map((g) => (
+          <option key={g.obra} value={g.obra}>{g.obra} · {g.items.length} amb.</option>
+        ))}
+      </select>
 
       {/* Import Modal */}
       {showImport && (
@@ -1392,19 +1420,22 @@ function GestaoObraTab({ obras }) {
       {showForm && (
         <div className="bg-white rounded-xl shadow-sm p-4 mb-3">
           <div className="space-y-2.5">
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Cliente *</label>
-                <input type="text" value={formData.cliente} onChange={(e) => setFormData({...formData, cliente: e.target.value})}
-                  placeholder="Nome do cliente"
-                  className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold" />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Obra *</label>
+            {/* Obra — read-only se vem da seleção */}
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase">Obra</label>
+              {selectedObra ? (
+                <div className="w-full border-2 border-gold/40 bg-gold/5 rounded-lg px-2.5 py-1.5 text-xs font-bold text-navy">{selectedObra}</div>
+              ) : (
                 <input type="text" value={formData.obra} onChange={(e) => setFormData({...formData, obra: e.target.value})}
-                  placeholder="Nome da obra"
+                  placeholder="Nome da obra *"
                   className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold" />
-              </div>
+              )}
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase">Cliente</label>
+              <input type="text" value={formData.cliente} onChange={(e) => setFormData({...formData, cliente: e.target.value})}
+                placeholder="Nome do cliente"
+                className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold" />
             </div>
             {['ambiente', 'equipe'].map(field => (
               <div key={field}>
@@ -1465,37 +1496,47 @@ function GestaoObraTab({ obras }) {
         </div>
       )}
 
-      {/* List */}
-      <div className="space-y-2">
-        {items.map(item => (
-          <div key={item.id} className="bg-white rounded-xl shadow-sm p-3">
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex-1">
-                <p className="font-bold text-sm text-navy">{item.cliente}</p>
-                <p className="text-xs text-gray-500">{item.obra} · {item.ambiente}</p>
-              </div>
-              <div className="flex gap-1">
+      {/* Ambientes da obra selecionada */}
+      {selectedObra && (
+        <div className="space-y-2">
+          {selectedObraItems.length === 0 && !showForm && (
+            <p className="text-center py-6 text-sm text-gray-400">Nenhum ambiente registrado. Clique em Novo.</p>
+          )}
+          {selectedObraItems.map((item) => (
+            <div key={item.id} className="bg-white rounded-xl shadow-sm p-3">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex-1">
+                  <p className="font-bold text-sm text-navy">{item.ambiente || '—'}</p>
+                  <p className="text-xs text-gray-400">{item.equipe || ''}{item.data_inicio ? ` · ${item.data_inicio}` : ''}{item.data_fim ? ` → ${item.data_fim}` : ''}</p>
+                </div>
                 <button onClick={() => { setFormData(item); setEditId(item.id); setShowForm(true); }}
-                  className="px-2 py-1 text-xs font-bold bg-blue-100 text-blue-600 rounded-md">E</button>
+                  className="px-2 py-1 text-xs font-bold bg-blue-100 text-blue-600 rounded-md ml-2">Editar</button>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div className="bg-gray-50 p-2 rounded">
+                  <p className="text-gray-400 text-[10px]">Retrabalhos</p>
+                  <p className="font-bold text-red-600">{item.retrabalhos || 0}</p>
+                </div>
+                <div className="bg-gray-50 p-2 rounded">
+                  <p className="text-gray-400 text-[10px]">Qualidade</p>
+                  <p className="font-bold text-green-600">{item.qualidade || 0}%</p>
+                </div>
+                <div className="bg-gray-50 p-2 rounded">
+                  <p className="text-gray-400 text-[10px]">Status</p>
+                  <p className={`font-bold text-xs capitalize ${item.status === 'concluido' ? 'text-green-600' : 'text-blue-600'}`}>{item.status === 'concluido' ? 'Concluído' : 'Em progresso'}</p>
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-2 text-xs">
-              <div className="bg-gray-50 p-2 rounded">
-                <p className="text-gray-400 text-[10px]">Retrabalhos</p>
-                <p className="font-bold text-red-600">{item.retrabalhos}</p>
-              </div>
-              <div className="bg-gray-50 p-2 rounded">
-                <p className="text-gray-400 text-[10px]">Qualidade</p>
-                <p className="font-bold text-green-600">{item.qualidade}%</p>
-              </div>
-              <div className="bg-gray-50 p-2 rounded">
-                <p className="text-gray-400 text-[10px]">Status</p>
-                <p className="font-bold text-blue-600 capitalize">{item.status}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {!selectedObra && obraGroups.length === 0 && (
+        <p className="text-center py-8 text-sm text-gray-400">Nenhuma obra importada ainda.</p>
+      )}
+      {!selectedObra && obraGroups.length > 0 && (
+        <p className="text-center py-6 text-sm text-gray-400">Selecione uma obra acima para ver os ambientes.</p>
+      )}
     </div>
   );
 }
