@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { authenticate, setSession, getSession } from '@/lib/auth';
+import { authenticate, setSession, getSession, clearSession } from '@/lib/auth';
 import Link from 'next/link';
 
 const ROLE_CONFIG = {
@@ -213,22 +213,19 @@ const CONTEXT_LABELS = {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [nextUrl, setNextUrl] = useState('/');
-  const [roleParam, setRoleParam] = useState('');
-
-  useEffect(() => {
-    try {
-      setNextUrl(searchParams.get('next') || '/');
-      setRoleParam(searchParams.get('role') || '');
-    } catch (e) {
-      console.error('Error getting search params:', e);
-    }
-  }, [searchParams]);
+  const nextUrl = searchParams.get('next') || '/';
+  const roleParam = searchParams.get('role') || '';
 
   useEffect(() => {
     const session = getSession();
     if (session) {
-      router.replace(nextUrl !== '/' ? nextUrl : (ROLE_CONFIG[session.role]?.dest || '/'));
+      const sessionDest = ROLE_CONFIG[session.role]?.dest || '/';
+      // Se a sessão atual não tem permissão para o destino solicitado, limpa e força novo login
+      if (nextUrl !== '/' && sessionDest !== nextUrl) {
+        clearSession();
+        return;
+      }
+      router.replace(nextUrl !== '/' ? nextUrl : sessionDest);
     }
   }, [router, nextUrl]);
 

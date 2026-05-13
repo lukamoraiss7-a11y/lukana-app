@@ -607,6 +607,7 @@ function GestaoEscritorioTab({ obras }) {
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({});
+  const [showForm, setShowForm] = useState(false);
   const [showDesignarModal, setShowDesignarModal] = useState(false);
   const [pessoaSelecionada, setPessoaSelecionada] = useState(null);
   const [autoImportando, setAutoImportando] = useState(false);
