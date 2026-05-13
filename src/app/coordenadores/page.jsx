@@ -1834,48 +1834,6 @@ export default function CoordenadoresPage() {
         )}
 
         {/* ── SUPRIMENTOS ── */}
-        {activeTab === 'suprimentos' && (
-          <div className="px-3 py-3">
-            {/* Obras visíveis para equipe */}
-            <div className="bg-white rounded-xl shadow-sm p-4 mb-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Obras visíveis para a equipe</p>
-                <button onClick={handleLiberarTodas} disabled={aprovandoObra === 'all' || obras.length === 0}
-                  className="px-3 py-1 rounded-full text-xs font-bold border-2 border-green-400 bg-green-50 text-green-600 disabled:opacity-40">
-                  {aprovandoObra === 'all' ? '...' : 'Liberar todas'}
-                </button>
-              </div>
-              {obras.length === 0 && <p className="text-sm text-gray-400 text-center py-2">Nenhuma obra carregada.</p>}
-              <div className="space-y-2">
-                {obras.map((o) => (
-                  <div key={o.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-navy truncate">{o.nome}</div>
-                      {o.aprovada && o.aprovada_por
-                        ? <div className="text-[10px] text-green-500 mt-0.5">{o.aprovada_por} · {(() => { const d = new Date(o.aprovada_em); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} às ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; })()}</div>
-                        : <div className="text-[10px] text-red-400 mt-0.5">{o.aprovada ? 'Liberada' : 'Não liberada'}</div>
-                      }
-                    </div>
-                    <button
-                      onClick={() => handleToggleAprovada(o.id, o.aprovada)}
-                      disabled={aprovandoObra === o.id}
-                      className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-bold border-2 transition-colors disabled:opacity-40 ${o.aprovada ? 'border-green-400 bg-green-50 text-green-600' : 'border-gray-200 bg-gray-50 text-gray-400'}`}>
-                      {aprovandoObra === o.id ? '...' : o.aprovada ? 'Liberada ✓' : 'Liberar'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-gray-400 uppercase tracking-wide font-bold px-1">Pedidos de material</p>
-              <button onClick={loadAll} className="px-3 py-1.5 rounded-full text-xs font-bold border-2 border-gold text-gold-d bg-white">Atualizar</button>
-            </div>
-            {loading && <div className="text-center py-10 text-sm text-gray-400">Carregando...</div>}
-            {!loading && pedidos.length === 0 && <div className="text-center py-12 text-sm text-gray-400">Nenhum pedido nos últimos 7 dias.</div>}
-            {!loading && pedidos.map((p) => <PedidoCoordCard key={p.id} pedido={p} onStatusChange={handleStatusChange} />)}
-          </div>
-        )}
 
         {/* ── EQUIPE ── */}
         {activeTab === 'equipe' && (
