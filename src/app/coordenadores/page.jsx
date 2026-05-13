@@ -1431,35 +1431,49 @@ function GestaoObraTab({ obras }) {
                   className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold" />
               )}
             </div>
+            {/* Ambiente — select quando dentro de obra selecionada */}
             <div>
-              <label className="text-[10px] font-bold text-gray-400 uppercase">Cliente</label>
-              <input type="text" value={formData.cliente} onChange={(e) => setFormData({...formData, cliente: e.target.value})}
-                placeholder="Nome do cliente"
+              <label className="text-[10px] font-bold text-gray-400 uppercase">Cômodo / Ambiente *</label>
+              {selectedObra ? (
+                <select value={formData.ambiente || ''} onChange={(e) => setFormData({...formData, ambiente: e.target.value})}
+                  className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold bg-white">
+                  <option value="">— Selecione o cômodo —</option>
+                  {AMBIENTES_LISTA.map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+              ) : (
+                <input type="text" value={formData.ambiente || ''} onChange={(e) => setFormData({...formData, ambiente: e.target.value})}
+                  placeholder="Ex: Cozinha"
+                  className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold" />
+              )}
+            </div>
+            {/* Módulos */}
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase">Qtd. Módulos</label>
+              <input type="number" value={formData.modulos || ''} onChange={(e) => setFormData({...formData, modulos: e.target.value})}
+                placeholder="0" min="0"
                 className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold" />
             </div>
-            {['ambiente', 'equipe'].map(field => (
-              <div key={field}>
-                <label className="text-[10px] font-bold text-gray-400 uppercase">{field === 'ambiente' ? 'Ambiente' : 'Equipe'}</label>
-                <input type="text" value={formData[field]} onChange={(e) => setFormData({...formData, [field]: e.target.value})}
-                  placeholder={field === 'ambiente' ? 'Ex: Cozinha' : 'Ex: Marceneiro 1'}
+            {/* Equipe */}
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase">Equipe</label>
+              <input type="text" value={formData.equipe || ''} onChange={(e) => setFormData({...formData, equipe: e.target.value})}
+                placeholder="Ex: Eqp Gomes"
+                className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold" />
+            </div>
+            {/* Cliente — só mostra quando não tem obra selecionada */}
+            {!selectedObra && (
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Cliente</label>
+                <input type="text" value={formData.cliente || ''} onChange={(e) => setFormData({...formData, cliente: e.target.value})}
+                  placeholder="Nome do cliente"
                   className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold" />
               </div>
-            ))}
+            )}
             <div className="grid grid-cols-2 gap-2 text-xs">
               {['data_inicio', 'data_fim'].map(field => (
                 <div key={field}>
                   <label className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">{field === 'data_inicio' ? 'Data Início' : 'Data Fim'}</label>
                   <input type="date" value={formData[field]} onChange={(e) => setFormData({...formData, [field]: e.target.value})}
-                    className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-gold" />
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              {['modulos', 'paineis', 'portas_passagem'].map(field => (
-                <div key={field}>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">{field.charAt(0).toUpperCase() + field.slice(1).replace('_', ' ')}</label>
-                  <input type="number" value={formData[field] || ''} onChange={(e) => setFormData({...formData, [field]: e.target.value})}
-                    placeholder="0"
                     className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-gold" />
                 </div>
               ))}
@@ -1507,23 +1521,27 @@ function GestaoObraTab({ obras }) {
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">
                   <p className="font-bold text-sm text-navy">{item.ambiente || '—'}</p>
-                  <p className="text-xs text-gray-400">{item.equipe || ''}{item.data_inicio ? ` · ${item.data_inicio}` : ''}{item.data_fim ? ` → ${item.data_fim}` : ''}</p>
+                  <p className="text-xs text-gray-400">
+                    {item.modulos ? `${item.modulos} módulos` : ''}
+                    {item.equipe ? `${item.modulos ? ' · ' : ''}${item.equipe}` : ''}
+                    {item.data_inicio ? ` · ${item.data_inicio}` : ''}
+                  </p>
                 </div>
                 <button onClick={() => { setFormData(item); setEditId(item.id); setShowForm(true); }}
                   className="px-2 py-1 text-xs font-bold bg-blue-100 text-blue-600 rounded-md ml-2">Editar</button>
               </div>
               <div className="grid grid-cols-3 gap-2 text-xs">
                 <div className="bg-gray-50 p-2 rounded">
+                  <p className="text-gray-400 text-[10px]">Módulos</p>
+                  <p className="font-bold text-navy">{item.modulos || '—'}</p>
+                </div>
+                <div className="bg-gray-50 p-2 rounded">
                   <p className="text-gray-400 text-[10px]">Retrabalhos</p>
                   <p className="font-bold text-red-600">{item.retrabalhos || 0}</p>
                 </div>
                 <div className="bg-gray-50 p-2 rounded">
-                  <p className="text-gray-400 text-[10px]">Qualidade</p>
-                  <p className="font-bold text-green-600">{item.qualidade || 0}%</p>
-                </div>
-                <div className="bg-gray-50 p-2 rounded">
                   <p className="text-gray-400 text-[10px]">Status</p>
-                  <p className={`font-bold text-xs capitalize ${item.status === 'concluido' ? 'text-green-600' : 'text-blue-600'}`}>{item.status === 'concluido' ? 'Concluído' : 'Em progresso'}</p>
+                  <p className={`font-bold text-xs ${item.status === 'concluido' ? 'text-green-600' : 'text-blue-600'}`}>{item.status === 'concluido' ? 'Concluído' : 'Em progresso'}</p>
                 </div>
               </div>
             </div>
