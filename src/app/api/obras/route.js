@@ -7,8 +7,8 @@ const CU_LIST = '901705200106'; // Contratos e Pagamentos
 // APENAS no ClickUp. O app coordenadores exibe APENAS: id, nome, prazo, ambientes,
 // equipe, notas, status, aprovada. Nunca adicionar campos financeiros aqui.
 
-// Lines that are NOT room names (furniture descriptions, contacts, etc.)
-const FURNITURE_RE = /^\d|^armário|^prateleira|^painel|^sofá|^rack|^bancada|^gabinete|^estante|^mesa|^cadeira|^banco|^nicho|^móvel|^rouparia|^torre|^aéreo|^inferior|^superior|^divisória|^espelho|^balcão|^cuba|^tampo|^vão|^detalhe|^imagem|^sugestão|^contato|^\+55|\d{2}\s*9\d{4}|@|https?:\/\//i;
+// Nomes que NÃO são ambientes (móveis, contatos, pagamentos, etc.)
+const FURNITURE_RE = /^\d|^armário|^prateleira|^painel|^sofá|^rack|^bancada|^gabinete|^estante|^mesa|^cadeira|^banco|^nicho|^móvel|^rouparia|^torre|^aéreo|^inferior|^superior|^divisória|^espelho|^balcão|^cuba|^tampo|^vão|^detalhe|^imagem|^sugestão|^contato|^\+55|\d{2}\s*9\d{4}|@|https?:\/\/|R\$|pagamento|entrada|parcela|contrato|proposta|visita\s+técnica|reunião|medição|^ok$|^sim$|^não$/i;
 
 function parseAmbientes(text) {
   if (!text) return [];
@@ -24,28 +24,36 @@ async function fetchClickUpObras() {
   const token = process.env.CLICKUP_TOKEN;
   if (!token) return [];
   try {
-    const url = `https://api.clickup.com/api/v2/list/${CU_LIST}/task?statuses[]=pagamento%20fechado&include_closed=false&subtasks=true&page=0`;
-    const res = await fetch(url, { headers: { Authorization: token } });
-    if (!res.ok) return [];
-    const { tasks } = await res.json();
-    if (!tasks || tasks.length === 0) return [];
+    // Busca até 3 páginas para garantir que pega todas as tarefas + subtarefas
+    const allTasks = [];
+    for (let page = 0; page < 3; page++) {
+      const url = `https://api.clickup.com/api/v2/list/${CU_LIST}/task?statuses[]=pagamento%20fechado&include_closed=false&subtasks=true&page=${page}`;
+      const res = await fetch(url, { headers: { Authorization: token } });
+      if (!res.ok) break;
+      const { tasks } = await res.json();
+      if (!tasks || tasks.length === 0) break;
+      allTasks.push(...tasks);
+      if (tasks.length < 100) break; // última página
+    }
+    if (allTasks.length === 0) return [];
 
     // Separa tarefas principais de sub-tarefas
-    const mainTasks = tasks.filter((t) => !t.parent);
-    const subTasks  = tasks.filter((t) =>  t.parent);
+    const mainTasks = allTasks.filter((t) => !t.parent);
+    const subTasks  = allTasks.filter((t) =>  t.parent);
 
-    // Agrupa subtarefas pelo parent id → ambientes
+    // Agrupa subtarefas pelo parent id, filtrando nomes que não são ambientes
     const subByParent = {};
     subTasks.forEach((s) => {
+      const name = s.name?.trim();
+      if (!name || FURNITURE_RE.test(name) || name.length > 60) return;
       if (!subByParent[s.parent]) subByParent[s.parent] = [];
-      subByParent[s.parent].push(s.name);
+      subByParent[s.parent].push(name);
     });
 
     return mainTasks.map((t) => ({
       id: t.id,
       nome: t.name,
       prazo: t.due_date ? new Date(parseInt(t.due_date)).toISOString().slice(0, 10) : null,
-      // subtarefas têm prioridade; fallback para texto se não houver
       ambientes: subByParent[t.id]?.length > 0
         ? subByParent[t.id]
         : parseAmbientes(t.text_content || t.description || ''),
