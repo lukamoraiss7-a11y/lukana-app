@@ -904,8 +904,8 @@ function GestaoEscritorioTab({ obras }) {
 
       {/* Modal de Designação */}
       {showDesignarModal && pessoaSelecionada && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4 max-h-80 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 pt-16">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4 max-h-[70vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-navy mb-4">Designar tarefas para {pessoaSelecionada}</h3>
             <div className="space-y-2">
               {items.length === 0 ? (
