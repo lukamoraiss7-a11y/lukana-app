@@ -8,7 +8,7 @@ const CU_LIST = '901705200106'; // Contratos e Pagamentos
 // equipe, notas, status, aprovada. Nunca adicionar campos financeiros aqui.
 
 // Nomes que NÃO são ambientes (móveis, contatos, pagamentos, etc.)
-const FURNITURE_RE = /^\d|^armário|^prateleira|^painel|^sofá|^rack|^bancada|^gabinete|^estante|^mesa|^cadeira|^banco|^nicho|^móvel|^rouparia|^torre|^aéreo|^inferior|^superior|^divisória|^espelho|^balcão|^cuba|^tampo|^vão|^detalhe|^imagem|^sugestão|^contato|\+55|\d{2}\s*9\d{3,5}|@|https?:\/\/|R\$|pagamento|entrada|parcela|contrato|proposta|visita\s+técnica|reunião|medição|^ok$|^sim$|^não$/i;
+const FURNITURE_RE = /^\d|^armário|^prateleira|^painel|^sofá|^rack|^bancada|^gabinete|^estante|^mesa|^cadeira|^banco|^nicho|^móvel|^cabeceira|^torre|^aéreo|^inferior|^superior|^divisória|^espelho|^balcão|^cuba|^tampo|^vão|^detalhe|^imagem|^sugestão|^contato|\+55|\d{2}\s*9\d{3,5}|@|https?:\/\/|R\$|pagamento|entrada|parcela|contrato|proposta|visita\s+técnica|reunião|medição|^ok$|^sim$|^não$/i;
 
 function parseAmbientes(text) {
   if (!text) return [];
