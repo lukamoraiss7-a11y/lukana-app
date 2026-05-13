@@ -94,7 +94,7 @@ export async function GET(request) {
         id: cu.id,
         nome: cu.nome,
         prazo: ex.prazo ?? cu.prazo ?? null,
-        ambientes: cu.ambientes.length > 0 ? cu.ambientes : (ex.ambientes || []),
+        ambientes: cu.ambientes, // ClickUp is authoritative; don't fall back to stale Redis data
         status: ex.status || 'no_prazo',
         equipe: ex.equipe || [],
         notas: ex.notas || {},
