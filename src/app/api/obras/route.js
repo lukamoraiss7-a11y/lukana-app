@@ -24,15 +24,31 @@ async function fetchClickUpObras() {
   const token = process.env.CLICKUP_TOKEN;
   if (!token) return [];
   try {
-    const url = `https://api.clickup.com/api/v2/list/${CU_LIST}/task?statuses[]=pagamento%20fechado&include_closed=false&page=0`;
+    const url = `https://api.clickup.com/api/v2/list/${CU_LIST}/task?statuses[]=pagamento%20fechado&include_closed=false&subtasks=true&page=0`;
     const res = await fetch(url, { headers: { Authorization: token } });
     if (!res.ok) return [];
     const { tasks } = await res.json();
-    return (tasks || []).map((t) => ({
+    if (!tasks || tasks.length === 0) return [];
+
+    // Separa tarefas principais de sub-tarefas
+    const mainTasks = tasks.filter((t) => !t.parent);
+    const subTasks  = tasks.filter((t) =>  t.parent);
+
+    // Agrupa subtarefas pelo parent id → ambientes
+    const subByParent = {};
+    subTasks.forEach((s) => {
+      if (!subByParent[s.parent]) subByParent[s.parent] = [];
+      subByParent[s.parent].push(s.name);
+    });
+
+    return mainTasks.map((t) => ({
       id: t.id,
       nome: t.name,
       prazo: t.due_date ? new Date(parseInt(t.due_date)).toISOString().slice(0, 10) : null,
-      ambientes: parseAmbientes(t.text_content || t.description || ''),
+      // subtarefas têm prioridade; fallback para texto se não houver
+      ambientes: subByParent[t.id]?.length > 0
+        ? subByParent[t.id]
+        : parseAmbientes(t.text_content || t.description || ''),
     }));
   } catch { return []; }
 }
