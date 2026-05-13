@@ -29,7 +29,7 @@ async function fetchSubtasks(token, taskId) {
     if (!res.ok) return [];
     const { subtasks } = await res.json();
     return (subtasks || [])
-      .map((s) => s.name?.trim())
+      .map((s) => (s.name?.trim() || '').replace(/^\d+\.\d+\s*[-–]\s*/, '')) // strip "25.34 - " prefix
       .filter((name) => name && !FURNITURE_RE.test(name) && name.length < 60);
   } catch { return []; }
 }
@@ -41,7 +41,7 @@ async function fetchClickUpObras() {
     // 1. Busca tarefas principais com status "pagamento fechado"
     const mainTasks = [];
     for (let page = 0; page < 3; page++) {
-      const url = `https://api.clickup.com/api/v2/list/${CU_LIST}/task?statuses[]=pagamento%20fechado&include_closed=false&page=${page}`;
+      const url = `https://api.clickup.com/api/v2/list/${CU_LIST}/task?statuses[]=pagamento%20fechado&statuses[]=pagamento%20aprovado&include_closed=false&page=${page}`;
       const res = await fetch(url, { headers: { Authorization: token } });
       if (!res.ok) break;
       const { tasks } = await res.json();
