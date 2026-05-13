@@ -67,9 +67,37 @@ export default function ProjetosPage() {
 
                   {isOpen && (
                     <div className="px-4 pb-4 pt-1 border-t border-white/10 space-y-4">
-                      {/* Equipe */}
+                      {/* Equipe Marceneiros */}
                       <div>
-                        <p className="text-[11px] font-bold text-white/40 uppercase tracking-widest mb-2">Equipe na obra</p>
+                        <p className="text-[11px] font-bold text-white/40 uppercase tracking-widest mb-2">Marceneiros em atuação</p>
+                        {obra.equipe_marceneiros?.length ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {obra.equipe_marceneiros.map((eq) => (
+                              <span key={eq} className="px-3 py-1.5 rounded-full text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">{eq}</span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-white/30 text-xs italic">—</p>
+                        )}
+                      </div>
+
+                      {/* Equipe Modelagem */}
+                      <div>
+                        <p className="text-[11px] font-bold text-white/40 uppercase tracking-widest mb-2">Modelagem / Caderno Técnico</p>
+                        {obra.equipe_modelagem?.length ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {obra.equipe_modelagem.map((eq) => (
+                              <span key={eq} className="px-3 py-1.5 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">{eq}</span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-white/30 text-xs italic">—</p>
+                        )}
+                      </div>
+
+                      {/* Equipe escalada (antiga) */}
+                      <div>
+                        <p className="text-[11px] font-bold text-white/40 uppercase tracking-widest mb-2">Equipe escalada</p>
                         {obra.equipe?.length ? (
                           <div className="flex flex-wrap gap-1.5">
                             {obra.equipe.map((eq) => (
@@ -77,7 +105,7 @@ export default function ProjetosPage() {
                             ))}
                           </div>
                         ) : (
-                          <p className="text-white/30 text-xs italic">Nenhuma equipe escalada.</p>
+                          <p className="text-white/30 text-xs italic">—</p>
                         )}
                       </div>
 

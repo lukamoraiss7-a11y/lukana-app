@@ -114,6 +114,17 @@ export async function saveCaderno(items) {
   await redis.set('caderno:items', JSON.stringify(items));
 }
 
+// ── Gestão do Escritório ────────────────────────────────────────────────────
+export async function getGestaoEscritorio() {
+  const data = await redis.get('gestao:escritorio:items');
+  if (!data) return [];
+  return typeof data === 'string' ? JSON.parse(data) : data;
+}
+
+export async function saveGestaoEscritorio(items) {
+  await redis.set('gestao:escritorio:items', JSON.stringify(items));
+}
+
 // ── Gerente Fábrica ────────────────────────────────────────────────────────
 export async function saveGerenteFab(date, data) {
   await redis.set(`gerente:fab:${date}`, JSON.stringify(data));

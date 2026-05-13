@@ -596,6 +596,271 @@ function CadernoTab({ obras, session }) {
   );
 }
 
+// ── Gestão do Escritório (Coord. Projetos) ────────────────────────────────
+function GestaoEscritorioTab({ obras }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({});
+
+  const defaultForm = {
+    obra: '',
+    ambiente: '',
+    responsavel: '',
+    medicao: '',
+    inicio_modelagem: '',
+    fim_modelagem: '',
+    apresentacao_cliente: '',
+    aprovacao_cliente: '',
+    solicitacao_alteracao: '',
+    entrega_alteracao: '',
+    aprovacao_final: '',
+    inicio_caderno_tecnico: '',
+    fim_caderno_tecnico: '',
+    revisao: '',
+    envio_fabrica: '',
+    status: 'em_progresso',
+    observacoes: '',
+  };
+
+  const fetchItems = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/gestao-escritorio');
+      const d = await r.json();
+      setItems(Array.isArray(d) ? d : []);
+    } catch {
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchItems();
+  }, []);
+
+  const resetForm = () => {
+    setFormData(defaultForm);
+    setEditId(null);
+  };
+
+  const handleEdit = (item) => {
+    setFormData(item);
+    setEditId(item.id);
+    setShowForm(true);
+  };
+
+  const handleSave = async () => {
+    if (!formData.obra || !formData.ambiente) {
+      alert('Preencha Cliente/Obra e Ambiente');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (editId) {
+        const r = await fetch('/api/gestao-escritorio', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editId, ...formData }),
+        });
+        if (r.ok) {
+          setItems(prev =>
+            prev.map(i => i.id === editId ? { ...i, ...formData } : i)
+          );
+        }
+      } else {
+        const r = await fetch('/api/gestao-escritorio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        const res = await r.json();
+        if (r.ok) {
+          setItems(prev => [res.item, ...prev]);
+        }
+      }
+      resetForm();
+      setShowForm(false);
+    } catch (e) {
+      alert('Erro ao salvar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Remover?')) return;
+    setSaving(true);
+    try {
+      await fetch('/api/gestao-escritorio', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      setItems(prev => prev.filter(i => i.id !== id));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const calcularDias = (dataInicio, dataFim) => {
+    if (!dataInicio || !dataFim) return '—';
+    const d1 = new Date(dataInicio);
+    const d2 = new Date(dataFim);
+    const diff = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
+    return diff >= 0 ? diff : '—';
+  };
+
+  const tempoModelagem = calcularDias(formData.inicio_modelagem, formData.fim_modelagem);
+  const tempoAlteracao = calcularDias(formData.solicitacao_alteracao, formData.entrega_alteracao);
+  const tempoTecnico = calcularDias(formData.inicio_caderno_tecnico, formData.fim_caderno_tecnico);
+
+  if (loading) return <div className="text-center py-12 text-sm text-gray-400">Carregando...</div>;
+
+  return (
+    <div className="flex-1 overflow-y-auto pb-24 p-3">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-gray-400 uppercase tracking-wide font-bold">{items.length} projeto{items.length !== 1 ? 's' : ''}</p>
+        <button onClick={() => { resetForm(); setShowForm(!showForm); }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-gold text-navy">
+          <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Novo
+        </button>
+      </div>
+
+      {/* Form */}
+      {showForm && (
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-3">
+          <div className="space-y-2.5">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Cliente/Obra *</label>
+                <input type="text" value={formData.obra} onChange={(e) => setFormData({...formData, obra: e.target.value})}
+                  placeholder="Nome do cliente/obra"
+                  className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Ambiente *</label>
+                <input type="text" value={formData.ambiente} onChange={(e) => setFormData({...formData, ambiente: e.target.value})}
+                  placeholder="Ex: Cozinha, Sala"
+                  className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold" />
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase">Responsável</label>
+              <input type="text" value={formData.responsavel} onChange={(e) => setFormData({...formData, responsavel: e.target.value})}
+                placeholder="Nome"
+                className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold" />
+            </div>
+
+            <div className="pt-2 border-t border-gray-100">
+              <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Datas importantes</p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {[
+                  { key: 'medicao', label: 'Medição' },
+                  { key: 'inicio_modelagem', label: 'Início Modelagem' },
+                  { key: 'fim_modelagem', label: 'Fim Modelagem' },
+                  { key: 'apresentacao_cliente', label: 'Apresentação' },
+                  { key: 'aprovacao_cliente', label: 'Aprovação Cliente' },
+                  { key: 'solicitacao_alteracao', label: 'Sol. Alteração' },
+                  { key: 'entrega_alteracao', label: 'Ent. Alteração' },
+                  { key: 'aprovacao_final', label: 'Aprovação Final' },
+                  { key: 'inicio_caderno_tecnico', label: 'Início Caderno' },
+                  { key: 'fim_caderno_tecnico', label: 'Fim Caderno' },
+                  { key: 'revisao', label: 'Revisão' },
+                  { key: 'envio_fabrica', label: 'Envio Fábrica' },
+                ].map(({ key, label }) => (
+                  <div key={key}>
+                    <label className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">{label}</label>
+                    <input type="date" value={formData[key] || ''} onChange={(e) => setFormData({...formData, [key]: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-gold" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-gray-100">
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Status</label>
+                <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}
+                  className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:border-gold">
+                  <option value="em_progresso">Em Progresso</option>
+                  <option value="concluido">Concluído</option>
+                  <option value="em_espera">Em Espera</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase">Observações</label>
+              <textarea value={formData.observacoes} onChange={(e) => setFormData({...formData, observacoes: e.target.value})}
+                placeholder="Notas importantes..."
+                rows={2}
+                className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs resize-none focus:outline-none focus:border-gold" />
+            </div>
+
+            <div className="flex gap-2">
+              <button onClick={handleSave} disabled={saving}
+                className="flex-1 py-2 rounded-lg font-bold text-xs bg-gold text-navy active:opacity-80 disabled:opacity-50">
+                {saving ? 'Salvando...' : (editId ? 'Atualizar' : 'Adicionar')}
+              </button>
+              <button onClick={() => { resetForm(); setShowForm(false); }}
+                className="flex-1 py-2 rounded-lg font-bold text-xs border-2 border-gray-200 text-gray-600 active:opacity-80">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lista */}
+      <div className="space-y-2">
+        {items.map(item => (
+          <div key={item.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <button className="w-full flex items-center gap-2 px-3 py-3 text-left border-b border-gray-100"
+              onClick={() => handleEdit(item)}>
+              <div className="flex-1">
+                <div className="font-semibold text-sm text-gray-900">{item.obra}</div>
+                <div className="text-xs text-gray-400">{item.ambiente} · {item.responsavel || '—'}</div>
+              </div>
+              <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
+                item.status === 'concluido' ? 'bg-green-100 text-green-700' :
+                item.status === 'em_espera' ? 'bg-amber-100 text-amber-700' :
+                'bg-blue-100 text-blue-700'
+              }`}>
+                {item.status === 'concluido' ? 'Concluído' : item.status === 'em_espera' ? 'Espera' : 'Progresso'}
+              </span>
+            </button>
+            <div className="px-3 py-2 bg-gray-50 text-xs space-y-1">
+              <div className="grid grid-cols-4 gap-2">
+                <div>Modelagem: <span className="font-bold">{calcularDias(item.inicio_modelagem, item.fim_modelagem)}d</span></div>
+                <div>Alteração: <span className="font-bold">{calcularDias(item.solicitacao_alteracao, item.entrega_alteracao)}d</span></div>
+                <div>Técnico: <span className="font-bold">{calcularDias(item.inicio_caderno_tecnico, item.fim_caderno_tecnico)}d</span></div>
+              </div>
+              {item.observacoes && <div className="text-gray-600">{item.observacoes}</div>}
+              <div className="flex gap-2 mt-2">
+                <button onClick={() => handleEdit(item)}
+                  className="px-2 py-1 rounded text-xs font-bold border border-gray-300 text-gray-600 active:opacity-80">
+                  Editar
+                </button>
+                <button onClick={() => handleDelete(item.id)}
+                  className="px-2 py-1 rounded text-xs font-bold border border-red-300 text-red-600 active:opacity-80">
+                  Remover
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Termo de Recebimento ───────────────────────────────────────────────────
 const TERMO_TEXTO = `Os móveis entregues foram confeccionados conforme especificações acordadas no contrato inicial, incluindo medidas, materiais, cores e acabamentos. A entrega segue de acordo com os projetos, memorial descritivo e material publicitário utilizado pela empresa. Todos os itens foram instalados nos locais previamente definidos e encontram-se em perfeito estado de conservação e funcionamento.
 
@@ -1129,6 +1394,7 @@ export default function CoordenadoresPage() {
   const TABS = isProj ? [
     { id: 'caderno', label: 'Caderno', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4"/></svg> },
     { id: 'tecnico', label: 'Técnico', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg> },
+    { id: 'gestao', label: 'Gestão', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4"/></svg> },
     { id: 'termo',   label: 'Termo',   icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 12l2 2 4-4M7 7H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-2M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg> },
     ATA_TAB,
   ] : [
@@ -1395,6 +1661,7 @@ export default function CoordenadoresPage() {
 
         {activeTab === 'caderno' && <CadernoTab obras={obras} session={session} />}
         {activeTab === 'tecnico' && <CadernoTecnicoTab />}
+        {activeTab === 'gestao' && <GestaoEscritorioTab obras={obras} />}
         {activeTab === 'termo' && <TermoTab obras={obras} session={session} />}
         {activeTab === 'atas' && <AtasTab session={session} />}
 

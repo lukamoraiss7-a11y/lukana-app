@@ -374,28 +374,55 @@ function MemberCard({ sub }) {
 // ── Pedido card ───────────────────────────────────────────────────────────
 function PedidoCard({ pedido, onStatusChange }) {
   const [open, setOpen] = useState(false);
+  const [estoque, setEstoque] = useState([]);
+  const [loadingEstoque, setLoadingEstoque] = useState(false);
   const sm = PEDIDO_STATUS[pedido.status] || PEDIDO_STATUS.pendente;
   const nextStatus = pedido.status === 'pendente' ? 'em_compra' : pedido.status === 'em_compra' ? 'comprado' : null;
   const nextLabel  = nextStatus === 'em_compra' ? 'Em Compra' : nextStatus === 'comprado' ? 'Comprado' : null;
+
+  useEffect(() => {
+    if (open && estoque.length === 0) {
+      setLoadingEstoque(true);
+      fetch('/api/estoque').then(r => r.json()).then(d => setEstoque(Array.isArray(d) ? d : [])).finally(() => setLoadingEstoque(false));
+    }
+  }, [open]);
+
+  const checkEstoque = (item) => {
+    const found = estoque.find(e => e.nome === pedidoItemLabel(item));
+    return found ? { tem: found.quantidade >= item.quantidade, quantidade: found.quantidade } : { tem: false, quantidade: 0 };
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm mb-2 overflow-hidden">
       <button className={`w-full flex items-center gap-3 px-4 py-3.5 ${open ? 'border-b border-gray-100' : ''}`} onClick={() => setOpen(!open)}>
         <div className="flex-1 min-w-0 text-left">
           <div className="font-semibold text-[15px] text-gray-900 truncate">{pedido.obra_nome}</div>
-          <div className="text-xs text-gray-400">{pedido.solicitante} · {pedido.created_at?.slice(11,16)} · {pedido.itens?.length} {pedido.itens?.length === 1 ? 'item' : 'itens'}</div>
+          <div className="text-xs text-gray-400">{pedido.created_at?.slice(11,16)} · {pedido.itens?.length} {pedido.itens?.length === 1 ? 'item' : 'itens'}</div>
         </div>
         <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${sm.cls}`}>{sm.label}</span>
       </button>
       {open && (
         <div className="px-4 pb-4">
           <div className="mb-3">
-            {pedido.itens?.map((item, i) => (
-              <div key={i} className="flex justify-between py-2 border-b border-gray-50 last:border-0">
-                <span className="text-sm text-gray-700">{pedidoItemLabel(item)}</span>
-                <span className="text-sm font-bold text-navy ml-3 flex-shrink-0">{item.quantidade} {item.unidade}</span>
-              </div>
-            ))}
+            {loadingEstoque && <div className="text-xs text-gray-400 text-center py-2">Verificando estoque...</div>}
+            {!loadingEstoque && pedido.itens?.map((item, i) => {
+              const est = checkEstoque(item);
+              return (
+                <div key={i} className={`flex items-center justify-between py-2.5 px-2.5 rounded-lg border-2 mb-2 last:mb-0 ${est.tem ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-gray-700">{pedidoItemLabel(item)}</span>
+                    <div className="text-[11px] text-gray-500 mt-0.5">
+                      {est.tem ? (
+                        <span className="text-green-700 font-bold">✓ Em estoque: {est.quantidade} {item.unidade}</span>
+                      ) : (
+                        <span className="text-red-700 font-bold">✗ Falta: {est.quantidade} {item.unidade} (precisa {item.quantidade})</span>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-navy ml-3 flex-shrink-0">{item.quantidade}</span>
+                </div>
+              );
+            })}
           </div>
           {nextStatus && (
             <button onClick={() => onStatusChange(pedido.id, nextStatus)}

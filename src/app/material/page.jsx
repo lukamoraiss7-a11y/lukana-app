@@ -172,7 +172,7 @@ function PedidoTab() {
   };
 
   const canAdvance = () => {
-    if (step === 0) return obraId && solicitante;
+    if (step === 0) return obraId;
     if (step === 1) return itens.length > 0;
     return true;
   };
@@ -181,6 +181,11 @@ function PedidoTab() {
     setStep(0); setObraId(''); setObraNome('');
     if (!sessionNome) setSolicitante('');
     setItens([]); setItemForm(EMPTY_FORM); setSent(false); setBaixas([]);
+  };
+
+  const continueAdding = () => {
+    setSent(false); setBaixas([]);
+    setStep(1); setItens([]); setItemForm(EMPTY_FORM);
   };
 
   if (sent) {
@@ -201,7 +206,10 @@ function PedidoTab() {
             ))}
           </div>
         )}
-        <button onClick={resetAll} className="px-8 py-3 bg-gold text-navy font-bold rounded-full mb-4">Novo pedido</button>
+        <div className="flex gap-3">
+          <button onClick={continueAdding} className="flex-1 px-6 py-3 bg-navy text-gold font-bold rounded-full border-2 border-gold">Adicionar mais itens</button>
+          <button onClick={resetAll} className="flex-1 px-6 py-3 bg-gold text-navy font-bold rounded-full">Novo pedido</button>
+        </div>
       </div>
     );
   }
@@ -242,27 +250,12 @@ function PedidoTab() {
               </div>
             )}
           </div>
-          <div>
-            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Solicitante</label>
-            {sessionNome ? (
-              <div className="bg-white rounded-xl px-4 py-3.5 text-sm font-bold text-navy border-2 border-green-200">{sessionNome}</div>
-            ) : (
-              <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                {TEAM_MEMBERS.map((m) => (
-                  <button key={m} onClick={() => setSolicitante(m)}
-                    className={`w-full text-left px-4 py-3.5 text-sm font-medium border-b last:border-0 border-gray-100 transition-colors ${solicitante === m ? 'bg-navy text-gold font-bold' : 'text-gray-800'}`}>
-                    {m}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       )}
 
       {step === 1 && (
         <div className="flex-1 p-4 overflow-y-auto">
-          <div className="text-xs text-gray-400 mb-3 px-1">{obraNome} · {solicitante}</div>
+          <div className="text-xs text-gray-400 mb-3 px-1">{obraNome}</div>
           {itens.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-4">
               <div className="px-4 pt-3 pb-1">
@@ -332,7 +325,6 @@ function PedidoTab() {
           <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-4">
             <div className="px-4 py-3.5 border-b border-gray-100">
               <div className="font-bold text-navy text-[15px]">{obraNome}</div>
-              <div className="text-xs text-gray-400">{solicitante}</div>
             </div>
             {itens.map((item, i) => (
               <div key={i} className="flex items-center justify-between px-4 py-3 border-b border-gray-50 last:border-0">
