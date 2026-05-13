@@ -627,6 +627,7 @@ function GestaoEscritorioTab({ obras }) {
     envio_fabrica: '',
     status: 'em_progresso',
     observacoes: '',
+    equipe_escritorio: [],
   };
 
   const fetchItems = async () => {
@@ -712,7 +713,8 @@ function GestaoEscritorioTab({ obras }) {
   };
 
   const EQUIPE_ESC = ['Munyke', 'Ana', 'Aline', 'Letícia', 'Mariana'];
-  const [pessoasSelecionadas, setPessoasSelecionadas] = useState({});
+  const [showDesignarModal, setShowDesignarModal] = useState(false);
+  const [pessoaSelecionada, setPessoaSelecionada] = useState(null);
 
   const calcularDias = (dataInicio, dataFim) => {
     if (!dataInicio || !dataFim) return 0;
@@ -828,20 +830,76 @@ function GestaoEscritorioTab({ obras }) {
 
       {/* Designação de Tarefas */}
       <div className="mb-4">
-        <p className="text-xs text-gray-400 uppercase tracking-wide font-bold mb-2">Quem está fazendo o quê</p>
+        <p className="text-xs text-gray-400 uppercase tracking-wide font-bold mb-2">Clique para designar tarefas</p>
         <div className="grid grid-cols-2 gap-2">
-          {EQUIPE_ESC.map(pessoa => (
-            <button key={pessoa} onClick={() => setPessoasSelecionadas(prev => ({ ...prev, [pessoa]: !prev[pessoa] }))}
-              className={`py-2 rounded-lg text-xs font-bold transition-colors ${
-                pessoasSelecionadas[pessoa]
-                  ? 'bg-blue-100 text-blue-600 border-2 border-blue-300'
-                  : 'bg-gray-100 text-gray-600 border-2 border-gray-200'
-              }`}>
-              {pessoa}
-            </button>
-          ))}
+          {EQUIPE_ESC.map(pessoa => {
+            const contagemTarefas = items.filter(i => i.equipe_escritorio?.includes(pessoa)).length;
+            return (
+              <button key={pessoa} onClick={() => { setPessoaSelecionada(pessoa); setShowDesignarModal(true); }}
+                className="py-3 rounded-lg text-xs font-bold transition-colors bg-blue-50 text-blue-600 border-2 border-blue-200 hover:border-blue-400">
+                <div>{pessoa}</div>
+                {contagemTarefas > 0 && <div className="text-[10px] mt-1 opacity-70">{contagemTarefas} tarefa{contagemTarefas !== 1 ? 's' : ''}</div>}
+              </button>
+            );
+          })}
         </div>
       </div>
+
+      {/* Modal de Designação */}
+      {showDesignarModal && pessoaSelecionada && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4 max-h-80 overflow-y-auto">
+            <h3 className="text-lg font-bold text-navy mb-4">Designar tarefas para {pessoaSelecionada}</h3>
+            <div className="space-y-2">
+              {items.length === 0 ? (
+                <p className="text-sm text-gray-500 py-4 text-center">Nenhum projeto criado ainda</p>
+              ) : (
+                items.map(item => {
+                  const isAssigned = item.equipe_escritorio?.includes(pessoaSelecionada);
+                  return (
+                    <button key={item.id} onClick={() => {
+                      const updatedItems = items.map(i =>
+                        i.id === item.id
+                          ? {
+                              ...i,
+                              equipe_escritorio: isAssigned
+                                ? i.equipe_escritorio.filter(p => p !== pessoaSelecionada)
+                                : [...(i.equipe_escritorio || []), pessoaSelecionada]
+                            }
+                          : i
+                      );
+                      setItems(updatedItems);
+                      // Atualizar no servidor
+                      fetch('/api/gestao-escritorio', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          id: item.id,
+                          equipe_escritorio: updatedItems.find(i => i.id === item.id).equipe_escritorio
+                        })
+                      });
+                    }}
+                      className={`w-full p-3 rounded-lg text-left text-sm font-bold border-2 transition-colors ${
+                        isAssigned
+                          ? 'bg-blue-100 text-blue-600 border-blue-300'
+                          : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300'
+                      }`}>
+                      <div>{item.obra} - {item.ambiente}</div>
+                      {isAssigned && <div className="text-[10px] mt-1 opacity-70">✓ Designado</div>}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+            <div className="flex gap-2 justify-end pt-4 border-t mt-4">
+              <button onClick={() => { setShowDesignarModal(false); setPessoaSelecionada(null); }}
+                className="px-4 py-2 text-xs font-bold rounded-lg bg-gray-200 text-gray-600">
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* List */}
       <div className="space-y-3">
@@ -858,6 +916,15 @@ function GestaoEscritorioTab({ obras }) {
                   <p className="font-bold text-sm text-navy">{item.obra}</p>
                   <p className="text-xs text-gray-500">{item.ambiente}</p>
                   {item.responsavel && <p className="text-[10px] text-gray-400 mt-1">Resp: {item.responsavel}</p>}
+                  {item.equipe_escritorio?.length > 0 && (
+                    <div className="flex gap-1 mt-2 flex-wrap">
+                      {item.equipe_escritorio.map(pessoa => (
+                        <span key={pessoa} className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold">
+                          {pessoa}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-1 flex-shrink-0 ml-2">
                   <button onClick={() => handleEdit(item)}
@@ -945,6 +1012,106 @@ DISPOSIÇÕES GERAIS
 DECLARAÇÃO FINAL
 
 O contratante declara que os móveis planejados foram entregues em conformidade com o contrato firmado. Ambas as partes concordam com os termos aqui descritos.`;
+
+// ── Gestão (Head/Diretor) ────────────────────────────────
+function GestaoHeadTab() {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchItems = async () => {
+      try {
+        const r = await fetch('/api/gestao-escritorio');
+        const d = await r.json();
+        setItems(Array.isArray(d) ? d : []);
+      } catch {
+        setItems([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchItems();
+  }, []);
+
+  const calcularDias = (dataInicio, dataFim) => {
+    if (!dataInicio || !dataFim) return 0;
+    const d1 = new Date(dataInicio);
+    const d2 = new Date(dataFim);
+    return Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
+  };
+
+  if (loading) return <div className="text-center py-12 text-sm text-gray-400">Carregando...</div>;
+
+  return (
+    <div className="flex-1 overflow-y-auto pb-24 p-3">
+      <div className="grid grid-cols-1 gap-3">
+        {items.map(item => {
+          const tMod = calcularDias(item.inicio_modelagem, item.fim_modelagem);
+          const tAlt = calcularDias(item.solicitacao_alteracao, item.entrega_alteracao);
+          const tTec = calcularDias(item.inicio_caderno_tecnico, item.fim_caderno_tecnico);
+          const tTotal = tMod + tAlt + tTec;
+
+          return (
+            <div key={item.id} className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-navy">
+              <div className="mb-3">
+                <p className="font-bold text-sm text-navy">{item.obra}</p>
+                <p className="text-xs text-gray-500">{item.ambiente}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mb-3 text-[10px]">
+                {item.inicio_modelagem && (
+                  <div className="bg-blue-50 p-2 rounded">
+                    <p className="font-bold text-blue-600">Modelagem Início</p>
+                    <p className="text-gray-600">{new Date(item.inicio_modelagem).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                )}
+                {item.fim_modelagem && (
+                  <div className="bg-blue-50 p-2 rounded">
+                    <p className="font-bold text-blue-600">Modelagem Fim</p>
+                    <p className="text-gray-600">{new Date(item.fim_modelagem).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                )}
+                {item.inicio_caderno_tecnico && (
+                  <div className="bg-purple-50 p-2 rounded">
+                    <p className="font-bold text-purple-600">Técnico Início</p>
+                    <p className="text-gray-600">{new Date(item.inicio_caderno_tecnico).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                )}
+                {item.fim_caderno_tecnico && (
+                  <div className="bg-purple-50 p-2 rounded">
+                    <p className="font-bold text-purple-600">Técnico Fim</p>
+                    <p className="text-gray-600">{new Date(item.fim_caderno_tecnico).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Tempos totais e equipe */}
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                {tMod > 0 && <div className="bg-blue-100 text-blue-700 p-2 rounded text-center font-bold">Model. {tMod}d</div>}
+                {tAlt > 0 && <div className="bg-yellow-100 text-yellow-700 p-2 rounded text-center font-bold">Alt. {tAlt}d</div>}
+                {tTec > 0 && <div className="bg-purple-100 text-purple-700 p-2 rounded text-center font-bold">Tec. {tTec}d</div>}
+                {tTotal > 0 && <div className="bg-green-100 text-green-700 p-2 rounded text-center font-bold col-span-3">Total {tTotal}d</div>}
+              </div>
+
+              {item.equipe_escritorio?.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <p className="text-[10px] font-bold text-gray-400 mb-2">Equipe:</p>
+                  <div className="flex gap-1 flex-wrap">
+                    {item.equipe_escritorio.map(pessoa => (
+                      <span key={pessoa} className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold">
+                        {pessoa}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // ── Gestão de Obra (Coord. Obra) ────────────────────────────────
 function GestaoObraTab({ obras }) {
@@ -1775,8 +1942,12 @@ export default function CoordenadoresPage() {
   if (!mounted || !session) return null;
 
   const isProj = session?.role === 'coordenador_projetos';
+  const isHead = ['diretor', 'gerente'].includes(session?.role);
   const ATA_TAB = { id: 'atas', label: 'Atas', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 6h.01M12 16h.01M16 12h.01"/></svg> };
-  const TABS = isProj ? [
+  const TABS = isHead ? [
+    { id: 'gestao', label: 'Gestão', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M12 9v6m-3-3h6"/></svg> },
+    ATA_TAB,
+  ] : isProj ? [
     { id: 'caderno', label: 'Caderno', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4"/></svg> },
     { id: 'tecnico', label: 'Técnico', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg> },
     { id: 'gestao',  label: 'Gestão',  icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M12 9v6m-3-3h6"/></svg> },
@@ -1948,7 +2119,7 @@ export default function CoordenadoresPage() {
 
         {activeTab === 'caderno' && <CadernoTab obras={obras} session={session} />}
         {activeTab === 'tecnico' && <CadernoTecnicoTab />}
-        {activeTab === 'gestao' && <GestaoEscritorioTab obras={obras} />}
+        {activeTab === 'gestao' && (isHead ? <GestaoHeadTab /> : <GestaoEscritorioTab obras={obras} />)}
         {activeTab === 'gestao_obra' && <GestaoObraTab obras={obras} />}
         {activeTab === 'termo' && <TermoTab obras={obras} session={session} />}
         {activeTab === 'atas' && <AtasTab session={session} />}
