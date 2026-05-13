@@ -1,5 +1,9 @@
 'use client';
 
+// ⚠️ RESTRIÇÃO: Esta página exibe APENAS dados operacionais (clientes e ambientes relacionados).
+// Valores de negociação, entrada, parcelas e preços devem permanecer restritos ao ClickUp.
+// Coordenadores veem APENAS: cliente, ambiente, equipe, datas, métricas de execução (25/50/75/100).
+
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSession, clearSession } from '@/lib/auth';

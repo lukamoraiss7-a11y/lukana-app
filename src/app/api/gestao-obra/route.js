@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getGestaoObra, saveGestaoObra } from '@/lib/db';
 
+// ⚠️ RESTRIÇÃO: Gestão de Obra exibe APENAS dados operacionais.
+// Campos permitidos: cliente, obra, ambiente, equipe, datas, modulos, paineis, portas_passagem, retrabalhos, qualidade, status.
+// NUNCA adicionar: entrada, parcelas, valor, preço, custo. Esses dados são restritos ao ClickUp.
+
 export async function GET() {
   try {
     return NextResponse.json(await getGestaoObra());

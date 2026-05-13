@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { getGestaoObra, saveGestaoObra } from '@/lib/db';
 import { getObras } from '@/lib/db';
 
+// ⚠️ RESTRIÇÃO: Import de Gestão de Obra traz APENAS dados operacionais do ClickUp.
+// Campos importados: id, nome (obra), prazo, ambientes, equipe.
+// NUNCA importar: entrada, parcelas, valor, preço, custo. Esses dados devem permanecer no ClickUp.
+
 export async function POST(request) {
   try {
     const body = await request.json();

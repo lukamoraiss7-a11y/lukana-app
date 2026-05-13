@@ -3,6 +3,10 @@ import { getObras, saveObras } from '@/lib/db';
 
 const CU_LIST = '901705200106'; // Contratos e Pagamentos
 
+// ⚠️ RESTRIÇÃO: Valores de negociação (entrada, parcelas, preço, custo) devem permanecer
+// APENAS no ClickUp. O app coordenadores exibe APENAS: id, nome, prazo, ambientes,
+// equipe, notas, status, aprovada. Nunca adicionar campos financeiros aqui.
+
 // Lines that are NOT room names (furniture descriptions, contacts, etc.)
 const FURNITURE_RE = /^\d|^armário|^prateleira|^painel|^sofá|^rack|^bancada|^gabinete|^estante|^mesa|^cadeira|^banco|^nicho|^móvel|^rouparia|^torre|^aéreo|^inferior|^superior|^divisória|^espelho|^balcão|^cuba|^tampo|^vão|^detalhe|^imagem|^sugestão|^contato|^\+55|\d{2}\s*9\d{4}|@|https?:\/\//i;
 
