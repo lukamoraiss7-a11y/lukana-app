@@ -891,6 +891,247 @@ DECLARAÇÃO FINAL
 
 O contratante declara que os móveis planejados foram entregues em conformidade com o contrato firmado. Ambas as partes concordam com os termos aqui descritos.`;
 
+// ── Gestão de Obra (Coord. Obra) ────────────────────────────────
+function GestaoObraTab({ obras }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({});
+
+  const defaultForm = {
+    cliente: '',
+    obra: '',
+    ambiente: '',
+    equipe: '',
+    data_inicio: '',
+    data_fim: '',
+    tempo_execucao: '',
+    modulos: '',
+    paineis: '',
+    portas_passagem: '',
+    retrabalhos: '0',
+    qualidade: '0',
+    status: 'em_progresso',
+  };
+
+  const fetchItems = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/gestao-obra');
+      const d = await r.json();
+      setItems(Array.isArray(d) ? d : []);
+    } catch {
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchItems();
+  }, []);
+
+  const resetForm = () => {
+    setFormData(defaultForm);
+    setEditId(null);
+  };
+
+  const handleSave = async () => {
+    if (!formData.cliente || !formData.obra) {
+      alert('Preencha Cliente e Obra');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (editId) {
+        const r = await fetch('/api/gestao-obra', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editId, ...formData }),
+        });
+        if (r.ok) {
+          setItems(prev =>
+            prev.map(i => i.id === editId ? { ...i, ...formData } : i)
+          );
+        }
+      } else {
+        const r = await fetch('/api/gestao-obra', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        const res = await r.json();
+        if (r.ok) {
+          setItems(prev => [res.item, ...prev]);
+        }
+      }
+      resetForm();
+      setShowForm(false);
+    } catch (e) {
+      alert('Erro ao salvar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const calcularTempo = (inicio, fim) => {
+    if (!inicio || !fim) return 0;
+    const d1 = new Date(inicio);
+    const d2 = new Date(fim);
+    return Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
+  };
+
+  const dashboardData = {
+    totalObras: items.length,
+    totalRetrabalhos: items.reduce((sum, item) => sum + (parseInt(item.retrabalhos) || 0), 0),
+    mediaQualidade: items.length > 0 ? Math.round(items.reduce((sum, item) => sum + (parseInt(item.qualidade) || 0), 0) / items.length) : 0,
+  };
+
+  if (loading) return <div className="text-center py-12 text-sm text-gray-400">Carregando...</div>;
+
+  return (
+    <div className="flex-1 overflow-y-auto pb-24 p-3">
+      {/* Dashboard */}
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="bg-blue-50 rounded-xl p-3 border border-blue-200">
+          <p className="text-[10px] text-blue-600 font-bold uppercase">Total Obras</p>
+          <p className="text-2xl font-bold text-blue-700">{dashboardData.totalObras}</p>
+        </div>
+        <div className="bg-red-50 rounded-xl p-3 border border-red-200">
+          <p className="text-[10px] text-red-600 font-bold uppercase">Retrabalhos</p>
+          <p className="text-2xl font-bold text-red-700">{dashboardData.totalRetrabalhos}</p>
+        </div>
+        <div className="bg-green-50 rounded-xl p-3 border border-green-200">
+          <p className="text-[10px] text-green-600 font-bold uppercase">Qual. Média</p>
+          <p className="text-2xl font-bold text-green-700">{dashboardData.mediaQualidade}%</p>
+        </div>
+      </div>
+
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-gray-400 uppercase tracking-wide font-bold">{items.length} obra{items.length !== 1 ? 's' : ''}</p>
+        <button onClick={() => { resetForm(); setShowForm(!showForm); }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-gold text-navy">
+          <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Novo
+        </button>
+      </div>
+
+      {/* Form */}
+      {showForm && (
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-3">
+          <div className="space-y-2.5">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Cliente *</label>
+                <input type="text" value={formData.cliente} onChange={(e) => setFormData({...formData, cliente: e.target.value})}
+                  placeholder="Nome do cliente"
+                  className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Obra *</label>
+                <input type="text" value={formData.obra} onChange={(e) => setFormData({...formData, obra: e.target.value})}
+                  placeholder="Nome da obra"
+                  className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold" />
+              </div>
+            </div>
+            {['ambiente', 'equipe'].map(field => (
+              <div key={field}>
+                <label className="text-[10px] font-bold text-gray-400 uppercase">{field === 'ambiente' ? 'Ambiente' : 'Equipe'}</label>
+                <input type="text" value={formData[field]} onChange={(e) => setFormData({...formData, [field]: e.target.value})}
+                  placeholder={field === 'ambiente' ? 'Ex: Cozinha' : 'Ex: Marceneiro 1'}
+                  className="w-full border-2 border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold" />
+              </div>
+            ))}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {['data_inicio', 'data_fim'].map(field => (
+                <div key={field}>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">{field === 'data_inicio' ? 'Data Início' : 'Data Fim'}</label>
+                  <input type="date" value={formData[field]} onChange={(e) => setFormData({...formData, [field]: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-gold" />
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {['modulos', 'paineis', 'portas_passagem'].map(field => (
+                <div key={field}>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">{field.charAt(0).toUpperCase() + field.slice(1).replace('_', ' ')}</label>
+                  <input type="number" value={formData[field] || ''} onChange={(e) => setFormData({...formData, [field]: e.target.value})}
+                    placeholder="0"
+                    className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-gold" />
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              {['retrabalhos', 'qualidade'].map(field => (
+                <div key={field}>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">{field.charAt(0).toUpperCase() + field.slice(1)}</label>
+                  <input type="number" value={formData[field]} onChange={(e) => setFormData({...formData, [field]: e.target.value})}
+                    min="0" max="100"
+                    className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-gold" />
+                </div>
+              ))}
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Status</label>
+                <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}
+                  className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-gold bg-white">
+                  <option value="em_progresso">Em progresso</option>
+                  <option value="concluido">Concluído</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button onClick={handleSave} disabled={saving}
+                className="flex-1 px-3 py-2 rounded-lg text-xs font-bold bg-gold text-navy disabled:opacity-50">
+                {editId ? 'Atualizar' : 'Adicionar'}
+              </button>
+              <button onClick={() => { setShowForm(false); resetForm(); }}
+                className="flex-1 px-3 py-2 rounded-lg text-xs font-bold bg-gray-200 text-gray-600">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* List */}
+      <div className="space-y-2">
+        {items.map(item => (
+          <div key={item.id} className="bg-white rounded-xl shadow-sm p-3">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex-1">
+                <p className="font-bold text-sm text-navy">{item.cliente}</p>
+                <p className="text-xs text-gray-500">{item.obra} · {item.ambiente}</p>
+              </div>
+              <div className="flex gap-1">
+                <button onClick={() => { setFormData(item); setEditId(item.id); setShowForm(true); }}
+                  className="px-2 py-1 text-xs font-bold bg-blue-100 text-blue-600 rounded-md">E</button>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="bg-gray-50 p-2 rounded">
+                <p className="text-gray-400 text-[10px]">Retrabalhos</p>
+                <p className="font-bold text-red-600">{item.retrabalhos}</p>
+              </div>
+              <div className="bg-gray-50 p-2 rounded">
+                <p className="text-gray-400 text-[10px]">Qualidade</p>
+                <p className="font-bold text-green-600">{item.qualidade}%</p>
+              </div>
+              <div className="bg-gray-50 p-2 rounded">
+                <p className="text-gray-400 text-[10px]">Status</p>
+                <p className="font-bold text-blue-600 capitalize">{item.status}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function TermoTab({ obras, session }) {
   const [cliente, setCliente] = useState('');
   const [obraId, setObraId]   = useState('');
@@ -1399,7 +1640,7 @@ export default function CoordenadoresPage() {
     ATA_TAB,
   ] : [
     { id: 'diario',      label: 'Diário',      icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> },
-    { id: 'suprimentos', label: 'Suprimentos', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4"/></svg> },
+    { id: 'gestao_obra', label: 'Gestão de Obra', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M12 9v6m-3-3h6"/></svg> },
     { id: 'equipe',      label: 'Equipe',      icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> },
     { id: 'termo',       label: 'Termo',       icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 12l2 2 4-4M7 7H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-2M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg> },
     ATA_TAB,
@@ -1424,65 +1665,9 @@ export default function CoordenadoresPage() {
         {activeTab === 'diario' && (
           <div className="px-3 py-3">
 
-            {/* Resumo das equipes (obrigatório) */}
-            <div className="bg-white rounded-xl shadow-sm p-4 mb-3">
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Resumo das equipes <span className="text-red-400">*</span></p>
-              <textarea value={resumo} onChange={(e) => setResumo(e.target.value)} rows={3}
-                placeholder="Como estão as equipes hoje? Ritmo, dificuldades, destaques..."
-                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-gold placeholder:text-gray-300" />
-            </div>
-
-            {/* Registro de vistoria + foto */}
-            <div className="bg-white rounded-xl shadow-sm p-4 mb-3">
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-3">Registro de vistoria</p>
-              <div className="space-y-2 mb-3">
-                <select value={obraVistoria} onChange={(e) => setObraVistoria(e.target.value)}
-                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gold">
-                  <option value="">Selecionar cliente / obra...</option>
-                  {obras.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
-                </select>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide pt-1">Ambiente(s)</p>
-                <AmbientesPicker selected={ambientesVistoria} onChange={setAmbientesVistoria} />
-                {ambientesVistoria.includes('__outro__') && (
-                  <input value={ambienteOutro} onChange={(e) => setAmbienteOutro(e.target.value)}
-                    placeholder="Qual ambiente?"
-                    className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-gold" />
-                )}
-              </div>
-              <CoordChecklist checklist={checklist} setChecklist={setChecklist} />
-              {/* Foto integrada — dois botões */}
-              <div className="flex gap-2 mb-1">
-                <label className="flex-1 flex items-center justify-center gap-1.5 border-2 border-dashed rounded-xl px-2 py-3 text-xs font-semibold cursor-pointer text-gray-400 border-gray-200">
-                  <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg>
-                  Tirar Foto
-                  <input type="file" accept="image/*" capture="environment" className="hidden"
-                    onChange={(e) => { setFotoFile(e.target.files?.[0] || null); setFotoData(null); }} />
-                </label>
-                <label className="flex-1 flex items-center justify-center gap-1.5 border-2 border-dashed rounded-xl px-2 py-3 text-xs font-semibold cursor-pointer text-gray-400 border-gray-200">
-                  <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-                  Subir da Galeria
-                  <input type="file" accept="image/*" className="hidden"
-                    onChange={async (e) => {
-                      const f = e.target.files?.[0] || null;
-                      setFotoFile(f);
-                      setFotoData(f ? await readExifDate(f) : null);
-                    }} />
-                </label>
-              </div>
-              {fotoFile && (
-                <p className="text-[11px] text-green-600 mb-3 px-1 truncate">
-                  {fotoFile.name}{fotoData ? ` · Tirada em ${fotoData.split('-').reverse().join('/')}` : ''}
-                </p>
-              )}
-              <button onClick={handleVistoria} disabled={savingVistoria || uploadingFoto || !obraVistoria || Object.keys(checklist).length === 0}
-                className="w-full py-2.5 bg-navy text-gold font-bold rounded-xl text-sm disabled:opacity-40">
-                {savingVistoria || uploadingFoto ? 'Registrando...' : 'Registrar e enviar para ClickUp'}
-              </button>
-            </div>
-
-            {/* Nota rápida */}
+            {/* Atualização de obra */}
             <div className="bg-white rounded-xl shadow-sm p-4 mb-4">
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Nota rápida</p>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Atualização de obra</p>
               <div className="flex gap-2 mb-2">
                 {[{v:'nota',l:'Geral'},{v:'obra',l:'Obra'},{v:'fabrica',l:'Fábrica'}].map((t) => (
                   <button key={t.v} onClick={() => setTipo(t.v)}
@@ -1662,6 +1847,7 @@ export default function CoordenadoresPage() {
         {activeTab === 'caderno' && <CadernoTab obras={obras} session={session} />}
         {activeTab === 'tecnico' && <CadernoTecnicoTab />}
         {activeTab === 'gestao' && <GestaoEscritorioTab obras={obras} />}
+        {activeTab === 'gestao_obra' && <GestaoObraTab obras={obras} />}
         {activeTab === 'termo' && <TermoTab obras={obras} session={session} />}
         {activeTab === 'atas' && <AtasTab session={session} />}
 
