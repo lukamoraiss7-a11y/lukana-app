@@ -24,10 +24,12 @@ async function fetchClickUpObras() {
   const token = process.env.CLICKUP_TOKEN;
   if (!token) return [];
   try {
-    // Busca até 3 páginas para garantir que pega todas as tarefas + subtarefas
+    // Busca até 3 páginas SEM filtro de status na URL para que subtarefas
+    // (que têm status próprio diferente de "pagamento fechado") também sejam retornadas.
+    // Filtramos as tarefas principais por status no código.
     const allTasks = [];
     for (let page = 0; page < 3; page++) {
-      const url = `https://api.clickup.com/api/v2/list/${CU_LIST}/task?statuses[]=pagamento%20fechado&include_closed=false&subtasks=true&page=${page}`;
+      const url = `https://api.clickup.com/api/v2/list/${CU_LIST}/task?include_closed=false&subtasks=true&page=${page}`;
       const res = await fetch(url, { headers: { Authorization: token } });
       if (!res.ok) break;
       const { tasks } = await res.json();
@@ -37,8 +39,8 @@ async function fetchClickUpObras() {
     }
     if (allTasks.length === 0) return [];
 
-    // Separa tarefas principais de sub-tarefas
-    const mainTasks = allTasks.filter((t) => !t.parent);
+    // Separa tarefas principais com status "pagamento fechado" de sub-tarefas
+    const mainTasks = allTasks.filter((t) => !t.parent && t.status?.status?.toLowerCase() === 'pagamento fechado');
     const subTasks  = allTasks.filter((t) =>  t.parent);
 
     // Agrupa subtarefas pelo parent id, filtrando nomes que não são ambientes
