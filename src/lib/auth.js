@@ -24,6 +24,7 @@ export const MARCENEIROS = [
   { id: 'joao',    nome: 'João',    senha: 'joao99'     },
   { id: 'rodrigo', nome: 'Rodrigo', senha: 'rodrigo30'  },
   { id: 'victor',  nome: 'Victor',  senha: 'victor95'   },
+  { id: 'teste',   nome: 'Teste',   senha: 'teste1'     },
 ];
 
 // Roles sem senha (só nome)
