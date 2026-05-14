@@ -295,3 +295,26 @@ export async function getActiveUsers(timeoutSeconds = 300) {
 
   return users.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 }
+
+// ── Bonificação ────────────────────────────────────────────────────────────
+export async function getBonificacaoList() {
+  const data = await redis.get('bonificacao:list');
+  if (!data) return [];
+  return typeof data === 'string' ? JSON.parse(data) : data;
+}
+
+export async function saveBonificacaoRecord(record) {
+  const list = await getBonificacaoList();
+  const idx = list.findIndex((r) => r.id === record.id);
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...record, updated_at: new Date().toISOString() };
+  } else {
+    list.unshift({ ...record, created_at: new Date().toISOString() });
+  }
+  await redis.set('bonificacao:list', JSON.stringify(list));
+}
+
+export async function deleteBonificacaoRecord(id) {
+  const list = await getBonificacaoList();
+  await redis.set('bonificacao:list', JSON.stringify(list.filter((r) => r.id !== id)));
+}

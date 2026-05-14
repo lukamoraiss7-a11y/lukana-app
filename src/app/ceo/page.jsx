@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { MEU_DIA_BLOCOS, FABRICA_PERGUNTAS, EQUIPES_OBRA } from '@/lib/questions';
 import { getSession, clearSession } from '@/lib/auth';
 import AtasTab from '@/components/AtasTab';
+import BonificacaoTab from '@/components/BonificacaoTab';
 
 // DEBUG: Remove password requirement - accept anything
 const CEO_PASS = 'xxxxx';
@@ -1528,6 +1529,7 @@ export default function CeoPage() {
     { id: 'estoque', label: 'Estoque',   icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8l-2 4h12l-2-4z"/><path d="M12 12v4M10 14h4"/></svg> },
     { id: 'acessos', label: 'Acessos', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg> },
     { id: 'atas',    label: 'Atas',    icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 6h.01M12 16h.01M16 12h.01"/></svg> },
+    { id: 'bonificacao', label: 'Bonif.', icon: <svg fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="w-5 h-5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> },
   ];
 
   // Ambos os modos veem todas as tabs
@@ -1796,6 +1798,7 @@ export default function CeoPage() {
           </div>
         )}
         {activeTab === 'atas' && <AtasTab session={auth} readonly={auth?.role === 'diretor'} />}
+        {activeTab === 'bonificacao' && <BonificacaoTab />}
 
       </main>
 
