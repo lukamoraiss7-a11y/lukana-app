@@ -29,6 +29,7 @@ export async function POST(request) {
     // Create gestao-obra entries from obras (um por ambiente)
     const novoItems = [];
     for (const obra of obraSelecionadas) {
+      const descricaoObra = obra.descricao || '';
       // Se não há ambientes, criar uma entrada geral
       if (!obra.ambientes || obra.ambientes.length === 0) {
         novoItems.push({
@@ -44,14 +45,17 @@ export async function POST(request) {
           paineis: '0',
           portas_passagem: '0',
           retrabalhos: '0',
-          qualidade: '0',
+          qualidade: '10',
           status: 'em_progresso',
+          descricao_obra: descricaoObra,
+          descricao_ambiente: '',
           criado_em: new Date().toISOString(),
           atualizado_em: new Date().toISOString(),
         });
       } else {
         // Criar uma entrada por ambiente
         for (const ambiente of obra.ambientes) {
+          const subtarefa = obra.subtarefas?.find((s) => s.nome === ambiente);
           novoItems.push({
             id: crypto.randomUUID(),
             cliente: '', // será preenchido após
@@ -65,8 +69,10 @@ export async function POST(request) {
             paineis: '0',
             portas_passagem: '0',
             retrabalhos: '0',
-            qualidade: '0',
+            qualidade: '10',
             status: 'em_progresso',
+            descricao_obra: descricaoObra,
+            descricao_ambiente: subtarefa?.descricao || '',
             criado_em: new Date().toISOString(),
             atualizado_em: new Date().toISOString(),
           });

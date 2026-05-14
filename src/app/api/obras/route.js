@@ -10,6 +10,18 @@ const CU_LIST = '901705200106'; // Contratos e Pagamentos
 // Nomes que NÃO são ambientes (móveis, contatos, pagamentos, etc.)
 const FURNITURE_RE = /^\d|^armário|^prateleira|^painel|^sofá|^rack|^bancada|^gabinete|^estante|^mesa|^cadeira|^banco|^nicho|^móvel|^cabeceira|^torre|^aéreo|^inferior|^superior|^divisória|^espelho|^balcão|^cuba|^tampo|^vão|^detalhe|^imagem|^sugestão|^contato|\+55|\d{2}\s*9\d{3,5}|@|https?:\/\/|R\$|pagamento|entrada|parcela|contrato|proposta|visita\s+técnica|reunião|medição|^ok$|^sim$|^não$/i;
 
+// Regex para filtrar LINHAS sensíveis em descrições (financeiro, contato)
+const SENSITIVE_LINE_RE = /R\$|\+55|\d{2}\s*9\d{3,}|@|https?:\/\/|entrada\s*[-–R$]|parcela|forma\s+de\s+pagamento|assinatura\s+do\s+contrato|sinal\s*[-–:R$]/i;
+
+function filterSensitive(text) {
+  if (!text) return '';
+  return text
+    .split('\n')
+    .filter((l) => l.trim() && !SENSITIVE_LINE_RE.test(l))
+    .join('\n')
+    .trim();
+}
+
 function parseAmbientes(text) {
   if (!text) return [];
   const seen = new Set();
@@ -26,12 +38,22 @@ async function fetchSubtasks(token, taskId) {
       `https://api.clickup.com/api/v2/task/${taskId}?include_subtasks=true`,
       { headers: { Authorization: token } }
     );
-    if (!res.ok) return [];
+    if (!res.ok) return { ambientes: [], subtarefas: [] };
     const { subtasks } = await res.json();
-    return (subtasks || [])
-      .map((s) => (s.name?.trim() || '').replace(/^\d+\.\d+\s*[-–]\s*/, '')) // strip "25.34 - " prefix
-      .filter((name) => name && !FURNITURE_RE.test(name) && name.length < 60);
-  } catch { return []; }
+    // Todas as subtarefas não-sensíveis (inclui móveis/detalhes, exclui contatos/pagamentos)
+    const subtarefas = (subtasks || [])
+      .map((s) => ({
+        nome: (s.name?.trim() || '').replace(/^\d+\.\d+\s*[-–]\s*/, ''),
+        descricao: filterSensitive(s.text_content || ''),
+        status: s.status?.status || '',
+      }))
+      .filter((s) => s.nome && !SENSITIVE_LINE_RE.test(s.nome) && s.nome.length < 80);
+    // Ambientes = subconjunto que passa no filtro mais estrito de nomes de cômodos
+    const ambientes = subtarefas
+      .filter((s) => !FURNITURE_RE.test(s.nome) && s.nome.length < 60)
+      .map((s) => s.nome);
+    return { ambientes, subtarefas };
+  } catch { return { ambientes: [], subtarefas: [] }; }
 }
 
 async function fetchClickUpObras() {
@@ -53,12 +75,17 @@ async function fetchClickUpObras() {
 
     // 2. Para cada tarefa, busca subtarefas individualmente (evita problema de paginação)
     const results = await Promise.all(
-      mainTasks.map(async (t) => ({
-        id: t.id,
-        nome: t.name,
-        prazo: t.due_date ? new Date(parseInt(t.due_date)).toISOString().slice(0, 10) : null,
-        ambientes: await fetchSubtasks(token, t.id),
-      }))
+      mainTasks.map(async (t) => {
+        const { ambientes, subtarefas } = await fetchSubtasks(token, t.id);
+        return {
+          id: t.id,
+          nome: t.name,
+          prazo: t.due_date ? new Date(parseInt(t.due_date)).toISOString().slice(0, 10) : null,
+          descricao: filterSensitive(t.text_content || ''),
+          ambientes,
+          subtarefas,
+        };
+      })
     );
 
     // Fallback para text_content se nenhuma subtarefa válida retornou
@@ -95,6 +122,8 @@ export async function GET(request) {
         nome: cu.nome,
         prazo: ex.prazo ?? cu.prazo ?? null,
         ambientes: cu.ambientes, // ClickUp is authoritative; don't fall back to stale Redis data
+        descricao: cu.descricao || '',       // descrição filtrada da task principal
+        subtarefas: cu.subtarefas || [],    // subtarefas completas com descricao por ambiente
         status: ex.status || 'no_prazo',
         equipe: ex.equipe || [],
         notas: ex.notas || {},

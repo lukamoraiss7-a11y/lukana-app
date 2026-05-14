@@ -1563,6 +1563,11 @@ function GestaoObraTab({ obras }) {
                   <p className={`font-bold text-xs ${item.status === 'concluido' ? 'text-green-600' : 'text-blue-600'}`}>{item.status === 'concluido' ? 'Concluído' : 'Em progresso'}</p>
                 </div>
               </div>
+              {item.descricao_ambiente && (
+                <div className="mt-2 p-2 bg-blue-50 border border-blue-100 rounded text-[11px] text-gray-600 whitespace-pre-line leading-relaxed">
+                  {item.descricao_ambiente}
+                </div>
+              )}
             </div>
           ))}
         </div>
