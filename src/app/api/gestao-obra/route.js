@@ -30,7 +30,7 @@ export async function POST(request) {
       paineis: body.paineis || '0',
       portas_passagem: body.portas_passagem || '0',
       retrabalhos: body.retrabalhos || '0',
-      qualidade: body.qualidade || '0',
+      qualidade: body.qualidade || '10',
       status: body.status || 'em_progresso',
       criado_em: new Date().toISOString(),
       atualizado_em: new Date().toISOString(),
