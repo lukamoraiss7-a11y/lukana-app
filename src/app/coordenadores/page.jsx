@@ -1171,6 +1171,11 @@ function GestaoHeadTab() {
 }
 
 // ── Gestão de Obra (Coord. Obra) ────────────────────────────────
+function calcQualidade(retrabalhos) {
+  const r = parseInt(retrabalhos) || 0;
+  return Math.max(0, 10 - Math.max(0, r - 2));
+}
+
 function GestaoObraTab({ obras }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1212,7 +1217,7 @@ function GestaoObraTab({ obras }) {
     paineis: '',
     portas_passagem: '',
     retrabalhos: '0',
-    qualidade: '0',
+    qualidade: '10',
     status: 'em_progresso',
   };
 
@@ -1479,14 +1484,22 @@ function GestaoObraTab({ obras }) {
               ))}
             </div>
             <div className="grid grid-cols-3 gap-2 text-xs">
-              {['retrabalhos', 'qualidade'].map(field => (
-                <div key={field}>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">{field.charAt(0).toUpperCase() + field.slice(1)}</label>
-                  <input type="number" value={formData[field]} onChange={(e) => setFormData({...formData, [field]: e.target.value})}
-                    min="0" max="100"
-                    className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-gold" />
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Retrabalhos</label>
+                <input type="number" value={formData.retrabalhos} min="0"
+                  onChange={(e) => {
+                    const r = e.target.value;
+                    setFormData({...formData, retrabalhos: r, qualidade: String(calcQualidade(r))});
+                  }}
+                  className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-gold" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Qualidade</label>
+                <div className={`w-full border-2 rounded-lg px-2 py-1 font-bold text-center ${parseInt(formData.qualidade) < 5 ? 'border-red-300 bg-red-50 text-red-600' : parseInt(formData.qualidade) <= 7 ? 'border-amber-300 bg-amber-50 text-amber-600' : 'border-green-300 bg-green-50 text-green-600'}`}>
+                  {formData.qualidade}/10
                 </div>
-              ))}
+                {parseInt(formData.qualidade) < 5 && <p className="text-[9px] text-red-500 font-bold mt-0.5 text-center">⚠ CRÍTICO</p>}
+              </div>
               <div>
                 <label className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Status</label>
                 <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}
@@ -1530,7 +1543,7 @@ function GestaoObraTab({ obras }) {
                 <button onClick={() => { setFormData(item); setEditId(item.id); setShowForm(true); }}
                   className="px-2 py-1 text-xs font-bold bg-blue-100 text-blue-600 rounded-md ml-2">Editar</button>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="grid grid-cols-4 gap-2 text-xs">
                 <div className="bg-gray-50 p-2 rounded">
                   <p className="text-gray-400 text-[10px]">Módulos</p>
                   <p className="font-bold text-navy">{item.modulos || '—'}</p>
@@ -1538,6 +1551,12 @@ function GestaoObraTab({ obras }) {
                 <div className="bg-gray-50 p-2 rounded">
                   <p className="text-gray-400 text-[10px]">Retrabalhos</p>
                   <p className="font-bold text-red-600">{item.retrabalhos || 0}</p>
+                </div>
+                <div className={`p-2 rounded ${(item.qualidade !== undefined ? parseInt(item.qualidade) : calcQualidade(item.retrabalhos)) < 5 ? 'bg-red-50' : (item.qualidade !== undefined ? parseInt(item.qualidade) : calcQualidade(item.retrabalhos)) <= 7 ? 'bg-amber-50' : 'bg-green-50'}`}>
+                  <p className="text-gray-400 text-[10px]">Qualidade</p>
+                  <p className={`font-bold ${(item.qualidade !== undefined ? parseInt(item.qualidade) : calcQualidade(item.retrabalhos)) < 5 ? 'text-red-600' : (item.qualidade !== undefined ? parseInt(item.qualidade) : calcQualidade(item.retrabalhos)) <= 7 ? 'text-amber-600' : 'text-green-600'}`}>
+                    {(item.qualidade !== undefined ? item.qualidade : calcQualidade(item.retrabalhos))}/10
+                  </p>
                 </div>
                 <div className="bg-gray-50 p-2 rounded">
                   <p className="text-gray-400 text-[10px]">Status</p>
@@ -1554,6 +1573,112 @@ function GestaoObraTab({ obras }) {
       )}
       {!selectedObra && obraGroups.length > 0 && (
         <p className="text-center py-6 text-sm text-gray-400">Selecione uma obra acima para ver os ambientes.</p>
+      )}
+    </div>
+  );
+}
+
+function RegistroVistoria({ obras, session }) {
+  const [obraId, setObraId]         = useState('');
+  const [ambientes, setAmbientes]   = useState([]);
+  const [ambienteOutro, setAmbienteOutro] = useState('');
+  const [checklist, setChecklist]   = useState({});
+  const [fotoFile, setFotoFile]     = useState(null);
+  const [fotoData, setFotoData]     = useState(null);
+  const [saving, setSaving]         = useState(false);
+  const [done, setDone]             = useState(false);
+
+  const handleSave = async () => {
+    if (!obraId) { alert('Selecione a obra.'); return; }
+    setSaving(true);
+    try {
+      const obra = obras.find((o) => o.id === obraId);
+      const ambienteStr = ambientes.map((a) => a === '__outro__' ? ambienteOutro : a).filter(Boolean).join(', ');
+      await fetch('/api/vistoria', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task_id: obraId, obra_nome: obra?.nome || obraId, ambiente: ambienteStr, checklist, autor: session?.nome || '' }),
+      });
+      if (fotoFile) {
+        const form = new FormData();
+        form.append('task_id', obraId);
+        form.append('file', fotoFile);
+        await fetch('/api/attachment', { method: 'POST', body: form });
+      }
+      setDone(true);
+    } catch { alert('Erro ao registrar vistoria.'); }
+    setSaving(false);
+  };
+
+  if (done) {
+    return (
+      <div className="px-4 py-8 flex flex-col items-center gap-4">
+        <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
+          <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <p className="font-bold text-navy text-lg">Vistoria registrada!</p>
+        <button onClick={() => { setDone(false); setObraId(''); setAmbientes([]); setChecklist({}); setFotoFile(null); setFotoData(null); }}
+          className="w-full py-3 bg-navy text-white font-bold rounded-xl text-sm">Nova Vistoria</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-3 py-3 space-y-4">
+      <p className="text-xs text-gray-400 uppercase tracking-wide font-bold px-1">Registro de Vistoria</p>
+      <div className="bg-white rounded-xl shadow-sm p-4">
+        <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Obra *</label>
+        <select value={obraId} onChange={(e) => setObraId(e.target.value)}
+          className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-gold bg-white">
+          <option value="">— Selecione a obra —</option>
+          {obras.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
+        </select>
+      </div>
+      {obraId && (
+        <>
+          <div className="bg-white rounded-xl shadow-sm p-4">
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Ambientes</p>
+            <AmbientesPicker selected={ambientes} onChange={setAmbientes} />
+            {ambientes.includes('__outro__') && (
+              <input value={ambienteOutro} onChange={(e) => setAmbienteOutro(e.target.value)}
+                placeholder="Qual ambiente?" autoCapitalize="words"
+                className="w-full mt-2 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gold" />
+            )}
+          </div>
+          <div className="bg-white rounded-xl shadow-sm p-4">
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Checklist</p>
+            <CoordChecklist checklist={checklist} setChecklist={setChecklist} />
+          </div>
+          <div className="bg-white rounded-xl shadow-sm p-4">
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Foto</p>
+            {fotoData ? (
+              <div className="relative inline-block">
+                <img src={fotoData} alt="foto" className="h-20 w-20 object-cover rounded-xl border-2 border-gold" />
+                <button type="button" onClick={() => { setFotoFile(null); setFotoData(null); }}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center font-bold">×</button>
+              </div>
+            ) : (
+              <label className="flex items-center gap-2 w-fit cursor-pointer text-xs font-bold text-gray-400 border-2 border-dashed border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50 hover:border-gold transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                Foto
+                <input type="file" accept="image/*" capture="environment" className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    setFotoFile(f);
+                    const reader = new FileReader();
+                    reader.onload = (ev) => setFotoData(ev.target.result);
+                    reader.readAsDataURL(f);
+                    e.target.value = '';
+                  }} />
+              </label>
+            )}
+          </div>
+          <button onClick={handleSave} disabled={saving}
+            className="w-full py-3.5 bg-navy text-white font-bold rounded-xl text-sm disabled:opacity-50">
+            {saving ? 'Registrando...' : 'Registrar Vistoria'}
+          </button>
+        </>
       )}
     </div>
   );
@@ -1856,9 +1981,29 @@ function TermoRecebimento({ obras, session }) {
   );
 }
 
+function TermoCoordTab({ obras, session }) {
+  const [section, setSection] = useState('entrega');
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex gap-2 px-3 pt-3 pb-1">
+        <button onClick={() => setSection('entrega')}
+          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-colors ${section === 'entrega' ? 'bg-navy text-white' : 'bg-gray-100 text-gray-500'}`}>
+          Entrega
+        </button>
+        <button onClick={() => setSection('vistoria')}
+          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-colors ${section === 'vistoria' ? 'bg-navy text-white' : 'bg-gray-100 text-gray-500'}`}>
+          Vistoria
+        </button>
+      </div>
+      {section === 'entrega' && <TermoChecklistEntrega obras={obras} session={session} />}
+      {section === 'vistoria' && <RegistroVistoria obras={obras} session={session} />}
+    </div>
+  );
+}
+
 function TermoTab({ obras, session }) {
   if (['coordenador_obra', 'encarregado'].includes(session?.role)) {
-    return <TermoChecklistEntrega obras={obras} session={session} />;
+    return <TermoCoordTab obras={obras} session={session} />;
   }
   return <TermoRecebimento obras={obras} session={session} />;
 }
@@ -2051,14 +2196,6 @@ export default function CoordenadoresPage() {
   const [tipo, setTipo]       = useState('nota');
   const [obraNota, setObraNota] = useState(''); // Obra selecionada para notas
   const [checklist, setChecklist] = useState({});
-  const [obraVistoria, setObraVistoria] = useState('');
-  const [ambientesVistoria, setAmbientesVistoria] = useState([]);
-  const [ambienteOutro, setAmbienteOutro] = useState('');
-  const [savingVistoria, setSavingVistoria] = useState(false);
-  // Foto vistoria
-  const [fotoFile, setFotoFile] = useState(null);
-  const [fotoData, setFotoData] = useState(null);
-  const [uploadingFoto, setUploadingFoto] = useState(false);
   // Foto nota (Atualização de Obra)
   const [notaFotoFile, setNotaFotoFile] = useState(null);
   const [notaFotoData, setNotaFotoData] = useState(null);
@@ -2128,42 +2265,6 @@ export default function CoordenadoresPage() {
     setSaving(false);
   };
 
-  const handleVistoria = async () => {
-    if (!obraVistoria) return;
-    setSavingVistoria(true);
-    const ambienteStr = ambientesVistoria
-      .map((a) => a === '__outro__' ? ambienteOutro : a)
-      .filter(Boolean).join(', ');
-    try {
-      const obra = obras.find((o) => o.id === obraVistoria);
-      await fetch('/api/vistoria', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          task_id: obraVistoria,
-          obra_nome: obra?.nome || obraVistoria,
-          ambiente: ambienteStr,
-          checklist,
-          autor: session.nome,
-        }),
-      });
-      // Upload foto if present
-      if (fotoFile) {
-        setUploadingFoto(true);
-        const form = new FormData();
-        form.append('task_id', obraVistoria);
-        form.append('file', fotoFile);
-        await fetch('/api/attachment', { method: 'POST', body: form });
-        setFotoFile(null);
-        setUploadingFoto(false);
-      }
-      setChecklist({});
-      setAmbientesVistoria([]);
-      setAmbienteOutro('');
-      showToast('Vistoria registrada no ClickUp');
-    } catch { showToast('Erro ao registrar vistoria'); }
-    setSavingVistoria(false);
-  };
 
   const handleStatusChange = async (id, status) => {
     await fetch('/api/pedidos', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }) });
@@ -2272,58 +2373,6 @@ export default function CoordenadoresPage() {
                 className="w-full py-2.5 bg-gold text-navy font-bold rounded-xl text-sm disabled:opacity-50">
                 {saving ? 'Salvando...' : 'Registrar nota'}
               </button>
-            </div>
-
-            {/* Registro de Vistoria */}
-            <div className="bg-white rounded-xl shadow-sm p-4 mb-4">
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Registro de Vistoria</p>
-              <select value={obraVistoria} onChange={(e) => setObraVistoria(e.target.value)}
-                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gold mb-3 text-gray-700">
-                <option value="">— Selecione a obra —</option>
-                {obras.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
-              </select>
-              {obraVistoria && (
-                <>
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Ambientes</p>
-                  <AmbientesPicker selected={ambientesVistoria} onChange={setAmbientesVistoria} />
-                  {ambientesVistoria.includes('__outro__') && (
-                    <input value={ambienteOutro} onChange={(e) => setAmbienteOutro(e.target.value)}
-                      placeholder="Qual ambiente?" autoCapitalize="words"
-                      className="w-full mt-2 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gold" />
-                  )}
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mt-3 mb-1">Checklist</p>
-                  <CoordChecklist checklist={checklist} setChecklist={setChecklist} />
-                  {/* Foto */}
-                  <div className="mb-3">
-                    {fotoData ? (
-                      <div className="relative inline-block">
-                        <img src={fotoData} alt="foto" className="h-20 w-20 object-cover rounded-xl border-2 border-gold" />
-                        <button type="button" onClick={() => { setFotoFile(null); setFotoData(null); }}
-                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center font-bold">×</button>
-                      </div>
-                    ) : (
-                      <label className="flex items-center gap-2 w-fit cursor-pointer text-xs font-bold text-gray-400 border-2 border-dashed border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50 hover:border-gold transition-colors">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                        Foto
-                        <input type="file" accept="image/*" capture="environment" className="hidden"
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (!f) return;
-                            setFotoFile(f);
-                            const reader = new FileReader();
-                            reader.onload = (ev) => setFotoData(ev.target.result);
-                            reader.readAsDataURL(f);
-                            e.target.value = '';
-                          }} />
-                      </label>
-                    )}
-                  </div>
-                  <button onClick={handleVistoria} disabled={savingVistoria}
-                    className="w-full py-2.5 bg-navy text-white font-bold rounded-xl text-sm disabled:opacity-50">
-                    {savingVistoria ? 'Registrando...' : 'Registrar Vistoria'}
-                  </button>
-                </>
-              )}
             </div>
 
             {/* Timeline */}
