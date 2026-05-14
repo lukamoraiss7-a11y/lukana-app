@@ -88,6 +88,17 @@ function BonusCard({ record, marceneiroId }) {
       </div>
 
       <div className="p-4 space-y-3">
+        {/* Módulos */}
+        {record.modulos?.length > 0 && (
+          <div>
+            <p className="text-[11px] text-gray-400 font-semibold uppercase mb-1.5">Peças</p>
+            <div className="flex flex-wrap gap-1.5">
+              {record.modulos.map((m, i) => (
+                <span key={i} className="bg-navy/8 text-navy text-xs font-semibold px-2.5 py-1 rounded-full border border-navy/15">{m}</span>
+              ))}
+            </div>
+          </div>
+        )}
         {/* Valor base */}
         <div className="flex justify-between items-center">
           <span className="text-xs text-gray-500">Sua bonificação ({pct}%)</span>

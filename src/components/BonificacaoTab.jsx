@@ -93,6 +93,8 @@ function RecordForm({ initial, onSave, onCancel }) {
   const [inp, setInp]         = useState(initial?.inputs || { ...EMPTY_INPUTS });
   const [funcs, setFuncs]     = useState(initial?.funcionarios || []);
   const [tercs, setTercs]     = useState(initial?.terceirizados || []);
+  const [modulos, setModulos] = useState(initial?.modulos || []);
+  const [modInput, setModInput] = useState('');
   const [saving, setSaving]   = useState(false);
 
   const setF = (k) => (v) => setInp((p) => ({ ...p, [k]: v }));
@@ -123,6 +125,7 @@ function RecordForm({ initial, onSave, onCancel }) {
       data,
       data_limite: dataLim,
       inputs: inp,
+      modulos,
       funcionarios: funcs,
       terceirizados: tercs,
     });
@@ -154,6 +157,42 @@ function RecordForm({ initial, onSave, onCancel }) {
             <input type="date" value={dataLim} onChange={(e) => setDataLim(e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-gold" />
           </div>
+        </div>
+
+        {/* Módulos / Peças */}
+        <div>
+          <p className="text-xs font-bold text-navy uppercase tracking-wide mb-2">Módulos / Peças</p>
+          <div className="flex gap-2 mb-2">
+            <input
+              value={modInput}
+              onChange={(e) => setModInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && modInput.trim()) {
+                  e.preventDefault();
+                  setModulos((p) => [...p, modInput.trim()]);
+                  setModInput('');
+                }
+              }}
+              placeholder="Ex: Guarda Roupa, Painel..."
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-gold"
+            />
+            <button
+              type="button"
+              onClick={() => { if (modInput.trim()) { setModulos((p) => [...p, modInput.trim()]); setModInput(''); } }}
+              className="px-3 py-2 bg-navy text-white text-xs font-bold rounded-lg"
+            >+</button>
+          </div>
+          {modulos.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {modulos.map((m, i) => (
+                <span key={i} className="flex items-center gap-1 bg-navy/10 text-navy text-xs font-semibold px-2.5 py-1 rounded-full">
+                  {m}
+                  <button type="button" onClick={() => setModulos((p) => p.filter((_, j) => j !== i))}
+                    className="text-navy/40 hover:text-red-500 leading-none">×</button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Dados do Ambiente */}
@@ -355,6 +394,17 @@ function RecordCard({ record, onEdit, onDelete }) {
 
       {open && (
         <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">
+          {/* Módulos */}
+          {record.modulos?.length > 0 && (
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase mb-2">Módulos / Peças</p>
+              <div className="flex flex-wrap gap-1.5">
+                {record.modulos.map((m, i) => (
+                  <span key={i} className="bg-navy/10 text-navy text-xs font-semibold px-2.5 py-1 rounded-full">{m}</span>
+                ))}
+              </div>
+            </div>
+          )}
           {/* Marceneiros */}
           {record.funcionarios?.length > 0 && (
             <div>
