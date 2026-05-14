@@ -1081,6 +1081,70 @@ function BarEvol({ aFazer, andamento, finalizado, total }) {
   );
 }
 
+function DashboardMeta({ resumoObra, resumoEscritorio }) {
+  const now = new Date();
+  const dow = now.getDay();
+  const diffMon = dow === 0 ? -6 : 1 - dow;
+  const mon = new Date(now); mon.setDate(now.getDate() + diffMon); mon.setHours(0,0,0,0);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6); sun.setHours(23,59,59,999);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  const fmtDate = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  const inRange = (dateStr, from, to) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr + 'T12:00:00');
+    return d >= from && d <= to;
+  };
+
+  const obraSem   = resumoObra.filter(o => inRange(o.data_fim, mon, sun));
+  const obraMes   = resumoObra.filter(o => inRange(o.data_fim, monthStart, monthEnd));
+  const obraSemOk = obraSem.filter(o => ['finalizado','concluido'].includes(o.status)).length;
+  const obraMesOk = obraMes.filter(o => ['finalizado','concluido'].includes(o.status)).length;
+
+  const projDeadline = (p) => p.data_limite_tecnico || p.data_limite_modelagem || p.envio_fabrica;
+  const projSem   = resumoEscritorio.filter(p => inRange(projDeadline(p), mon, sun));
+  const projMes   = resumoEscritorio.filter(p => inRange(projDeadline(p), monthStart, monthEnd));
+  const projSemOk = projSem.filter(p => p.envio_fabrica || p.status === 'concluido').length;
+  const projMesOk = projMes.filter(p => p.envio_fabrica || p.status === 'concluido').length;
+
+  const Row = ({ label, semTotal, semOk, mesTotal, mesOk }) => (
+    <div className="grid grid-cols-3 items-center py-2.5 border-b border-gray-100 last:border-0">
+      <span className="text-xs font-bold text-gray-700">{label}</span>
+      <div className="px-2">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] text-gray-500">{fmtDate(mon)}–{fmtDate(sun)}</span>
+          <span className="text-[10px] font-bold text-amber-600">{semOk}/{semTotal}</span>
+        </div>
+        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-full bg-gold rounded-full transition-all" style={{ width: semTotal > 0 ? `${(semOk/semTotal)*100}%` : '0%' }} />
+        </div>
+      </div>
+      <div className="px-2">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] text-gray-500">{now.toLocaleDateString('pt-BR', { month: 'long' })}</span>
+          <span className="text-[10px] font-bold text-blue-600">{mesOk}/{mesTotal}</span>
+        </div>
+        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-full bg-blue-400 rounded-full transition-all" style={{ width: mesTotal > 0 ? `${(mesOk/mesTotal)*100}%` : '0%' }} />
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm px-4 py-3 mb-4">
+      <div className="grid grid-cols-3 mb-2">
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Área</span>
+        <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wide px-2">Semana</span>
+        <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wide px-2">Mês</span>
+      </div>
+      <Row label="🏗️ Obras"      semTotal={obraSem.length}  semOk={obraSemOk}  mesTotal={obraMes.length}  mesOk={obraMesOk} />
+      <Row label="📐 Escritório" semTotal={projSem.length}  semOk={projSemOk}  mesTotal={projMes.length}  mesOk={projMesOk} />
+    </div>
+  );
+}
+
 function ResumoDiario({ gerenteFab, resumoObra, resumoEscritorio }) {
   // ── Fábrica (Matheus) ──
   const fabSaem    = (gerenteFab?.gf4 || []).length;
@@ -1526,69 +1590,27 @@ export default function CeoPage() {
         {activeTab === 'meudia' && (
           <div className="px-3 py-3">
             <ResumoDiario gerenteFab={gerenteFab} resumoObra={resumoObra} resumoEscritorio={resumoEscritorio} />
-            <DateNav histKey={HIST_DIA_KEY} viewDate={viewDate} setViewDate={setViewDate} />
-            {viewDate !== today() ? (
-              /* Modo leitura: dia anterior */
-              (() => {
-                const hist = loadHist(HIST_DIA_KEY);
-                const old = hist[viewDate];
-                const pastSubs = submissions; // já carregado via equipeDate sync abaixo
-                if (!old) return (
-                  <div>
-                    <div className="text-center py-6 text-sm text-gray-400">Sem checklist registrado para este dia.</div>
-                    {/* Gerente/Coordenadora do dia passado via servidor */}
-                    {['Coordenadora de Obra', 'Gerente'].map((role) => {
-                      const sub = submissions.find((s) => s.name === role);
-                      return (
-                        <div key={role} className="mb-2.5">
-                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide px-1 mb-1.5">{role} · {viewDate.split('-').reverse().join('/')}</p>
-                          {sub ? <MemberCard sub={sub} onAction={() => {}} /> : <div className="bg-white rounded-xl shadow-sm px-4 py-3 text-sm text-gray-400 italic">Não preencheu neste dia.</div>}
+            <DashboardMeta resumoObra={resumoObra} resumoEscritorio={resumoEscritorio} />
+            {notas.length > 0 && (
+              <div className="mb-4">
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide px-1 mb-2">Notas do dia</p>
+                <div className="space-y-2">
+                  {notas.map((nota) => {
+                    const tipoColor = nota.tipo === 'obra' ? 'border-l-4 border-gold bg-gold/5'
+                      : nota.tipo === 'fabrica' ? 'border-l-4 border-blue-300 bg-blue-50/40'
+                      : 'border-l-4 border-gray-200 bg-white';
+                    return (
+                      <div key={nota.id} className={`rounded-lg shadow-sm px-3 py-2.5 text-sm ${tipoColor}`}>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="font-bold text-gray-800 text-xs">{nota.autor}</span>
+                          <span className="text-[10px] text-gray-400">{nota.created_at?.slice(11,16)}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                );
-                return (
-                  <div>
-                    <div className="mb-3 px-1 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 font-semibold text-center">
-                      Visualizando {viewDate.split('-').reverse().join('/')} · somente leitura
-                    </div>
-                    {MEU_DIA_BLOCOS.map((bloco) => (
-                      <TimeBlock key={bloco.id} bloco={bloco} data={old.blocos?.[bloco.id] || []} onChange={() => {}} />
-                    ))}
-                    {/* Gerente/Coordenadora do dia passado */}
-                    {['Coordenadora de Obra', 'Gerente'].map((role) => {
-                      const sub = submissions.find((s) => s.name === role);
-                      return (
-                        <div key={role} className="mb-2.5 mt-1">
-                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide px-1 mb-1.5">{role}</p>
-                          {sub ? <MemberCard sub={sub} onAction={() => {}} /> : <div className="bg-white rounded-xl shadow-sm px-4 py-3 text-sm text-gray-400 italic">Não preencheu neste dia.</div>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()
-            ) : (
-              /* Modo edição: hoje */
-              <div>
-                {MEU_DIA_BLOCOS.map((bloco) => (
-                  <TimeBlock key={bloco.id} bloco={bloco} data={diaData?.blocos[bloco.id] || []} onChange={(i,f,v) => handleDia(bloco.id,i,f,v)} />
-                ))}
-                <button onClick={() => { if (confirm('Resetar Meu Dia?')) { const hist = loadHist(HIST_DIA_KEY); delete hist[today()]; localStorage.setItem(HIST_DIA_KEY, JSON.stringify(hist)); setDiaData(initDia()); } }} className="mt-2 mb-4 w-full py-2 text-xs text-gray-400 border border-gray-200 rounded-xl">Resetar dia</button>
-
-                {/* Líderes: Coordenadora e Gerente */}
-                {['Coordenadora de Obra', 'Gerente'].map((role) => {
-                  const sub = submissions.find((s) => s.name === role);
-                  return (
-                    <div key={role} className="mb-2.5">
-                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide px-1 mb-1.5">{role}</p>
-                      {sub ? <MemberCard sub={sub} onAction={(a, name) => { if (a === 'excluir') setSubmissions((prev) => prev.filter((x) => x.name !== name)); }} /> : (
-                        <div className="bg-white rounded-xl shadow-sm px-4 py-3 text-sm text-gray-400 italic">Ainda não preencheu hoje.</div>
-                      )}
-                    </div>
-                  );
-                })}
+                        {nota.obra_nome && <span className="text-[10px] text-gray-500 block mb-1">{nota.obra_nome}</span>}
+                        <p className="text-gray-700 leading-snug text-xs">{nota.texto}</p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
