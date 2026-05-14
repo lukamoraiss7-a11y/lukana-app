@@ -10,7 +10,7 @@ const ROLE_CONFIG = {
   coordenador_obra:     { dest: '/coordenadores' },
   coordenador_projetos: { dest: '/coordenadores' },
   encarregado:          { dest: '/coordenadores' },
-  marceneiro:           { dest: '/equipe'        },
+  marceneiro:           { dest: '/meu-bonus'     },
   montador:             { dest: '/equipe'        },
   auxiliar:             { dest: '/equipe'        },
   cnc:                  { dest: '/cnc'           },

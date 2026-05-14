@@ -119,17 +119,20 @@ function RecordForm({ initial, onSave, onCancel }) {
   const handleSave = async () => {
     if (!nome.trim()) return alert('Informe o nome do projeto.');
     setSaving(true);
-    await onSave({
-      id: initial?.id || Date.now().toString(),
-      nome_projeto: nome.trim(),
-      data,
-      data_limite: dataLim,
-      inputs: inp,
-      modulos,
-      funcionarios: funcs,
-      terceirizados: tercs,
-    });
-    setSaving(false);
+    try {
+      await onSave({
+        id: initial?.id || Date.now().toString(),
+        nome_projeto: nome.trim(),
+        data,
+        data_limite: dataLim,
+        inputs: inp,
+        modulos,
+        funcionarios: funcs,
+        terceirizados: tercs,
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -504,11 +507,12 @@ export default function BonificacaoTab() {
   useEffect(() => { fetchRecords(); }, [fetchRecords]);
 
   const handleSave = async (record) => {
-    await fetch('/api/bonificacao', {
+    const res = await fetch('/api/bonificacao', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(record),
     });
+    if (!res.ok) { alert('Erro ao salvar. Tente novamente.'); return; }
     setShowForm(false);
     setEditing(null);
     await fetchRecords();
