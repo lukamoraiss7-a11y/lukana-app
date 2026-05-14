@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { authenticate, setSession, getSession, clearSession } from '@/lib/auth';
+import { authenticate, setSession, getSession, clearSession, MARCENEIROS } from '@/lib/auth';
 import Link from 'next/link';
 
 const ROLE_CONFIG = {
@@ -137,7 +137,7 @@ function CoordLogin({ onSuccess, presetRole }) {
   );
 }
 
-// Equipe: escolhe função + nome, sem senha
+// Equipe: escolhe função + nome, sem senha (exceto Marceneiro)
 const EQUIPE_ROLES = [
   { value: 'marceneiro', label: 'Marceneiro'   },
   { value: 'montador',   label: 'Montador'     },
@@ -145,28 +145,63 @@ const EQUIPE_ROLES = [
   { value: 'cnc',        label: 'Operador CNC' },
 ];
 
-function EquipeLogin({ onSuccess }) {
-  const [funcao, setFuncao] = useState('');
-  const [nome,   setNome]   = useState('');
-  const [error,  setError]  = useState('');
+function EquipeLogin({ onSuccess, onMarceneiroBonus }) {
+  const [funcao,     setFuncao]     = useState('');
+  const [nome,       setNome]       = useState('');
+  const [marcId,     setMarcId]     = useState('');
+  const [senha,      setSenha]      = useState('');
+  const [showPass,   setShowPass]   = useState(false);
+  const [error,      setError]      = useState('');
+
   const submit = () => {
     if (!funcao) { setError('Selecione a função.'); return; }
+
+    // Marceneiro: login individual com senha
+    if (funcao === 'marceneiro') {
+      if (!marcId) { setError('Selecione seu nome.'); return; }
+      const m = MARCENEIROS.find((x) => x.id === marcId);
+      if (!m || m.senha !== senha) { setError('Senha incorreta.'); return; }
+      onMarceneiroBonus({ id: m.id, nome: m.nome });
+      return;
+    }
+
     if (!nome.trim()) { setError('Informe seu nome.'); return; }
     const user = authenticate(funcao, '', nome);
     if (!user) { setError('Erro ao entrar.'); return; }
     onSuccess(user);
   };
+
   return (
     <div className="w-full max-w-xs space-y-3">
       <div className="grid grid-cols-2 gap-2">
         {EQUIPE_ROLES.map((r) => (
-          <button key={r.value} type="button" onClick={() => { setFuncao(r.value); setError(''); }}
+          <button key={r.value} type="button"
+            onClick={() => { setFuncao(r.value); setError(''); setNome(''); setMarcId(''); setSenha(''); }}
             className={`py-3 rounded-xl text-sm font-bold border-2 transition-all ${funcao === r.value ? 'border-gold bg-gold/10 text-gold' : 'border-white/20 bg-white/5 text-white/70'}`}>
             {r.label}
           </button>
         ))}
       </div>
-      {funcao && (
+
+      {funcao === 'marceneiro' && (
+        <>
+          <select value={marcId} onChange={(e) => { setMarcId(e.target.value); setError(''); }}
+            className="w-full px-4 py-3.5 rounded-xl text-sm bg-white/10 text-white border border-white/20 focus:outline-none focus:border-gold">
+            <option value="" className="bg-navy text-white">Selecionar nome...</option>
+            {MARCENEIROS.map((m) => (
+              <option key={m.id} value={m.id} className="bg-navy text-white">{m.nome}</option>
+            ))}
+          </select>
+          {marcId && (
+            <PasswordInput value={senha} onChange={(e) => { setSenha(e.target.value); setError(''); }} onEnter={submit} />
+          )}
+          {marcId && (
+            <button onClick={submit} className="w-full py-3.5 bg-gold text-navy font-bold rounded-xl">Entrar</button>
+          )}
+        </>
+      )}
+
+      {funcao && funcao !== 'marceneiro' && (
         <>
           <input value={nome} onChange={(e) => { setNome(e.target.value); setError(''); }}
             placeholder="Seu nome" autoComplete="name" autoCapitalize="words"
@@ -175,6 +210,7 @@ function EquipeLogin({ onSuccess }) {
           <button onClick={submit} className="w-full py-3.5 bg-gold text-navy font-bold rounded-xl">Entrar</button>
         </>
       )}
+
       {error && <p className="text-red-300 text-sm text-center">{error}</p>}
     </div>
   );
@@ -246,7 +282,10 @@ function LoginForm() {
 
       {nextUrl === '/gerente'       && <GerenteLogin onSuccess={onSuccess} />}
       {nextUrl === '/coordenadores' && <CoordLogin   onSuccess={onSuccess} presetRole={roleParam} />}
-      {nextUrl === '/equipe'        && <EquipeLogin  onSuccess={onSuccess} />}
+      {nextUrl === '/equipe'        && <EquipeLogin  onSuccess={onSuccess} onMarceneiroBonus={(user) => {
+          localStorage.setItem('lukana_mbonus_session', JSON.stringify(user));
+          router.push('/meu-bonus');
+        }} />}
       {nextUrl === '/ceo' && roleParam === 'ariel' && <ArielLogin onSuccess={onSuccess} />}
       {nextUrl === '/ceo' && roleParam !== 'ariel' && <DiretorLogin onSuccess={onSuccess} />}
       {!['/gerente','/coordenadores','/equipe','/ceo'].includes(nextUrl) && (

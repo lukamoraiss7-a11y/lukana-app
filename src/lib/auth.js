@@ -19,11 +19,11 @@ const ROLE_SENHAS = {
 
 // Marceneiros — acesso individual a /meu-bonus
 export const MARCENEIROS = [
-  { id: 'jean',    nome: 'Jean',    senha: 'prd74jn' },
-  { id: 'gomes',   nome: 'Gomes',   senha: 'fab38gm' },
-  { id: 'joao',    nome: 'João',    senha: 'mrc92jx' },
-  { id: 'rodrigo', nome: 'Rodrigo', senha: 'ops56rd' },
-  { id: 'victor',  nome: 'Victor',  senha: 'lkn83vc' },
+  { id: 'jean',    nome: 'Jean',    senha: 'jean96'     },
+  { id: 'gomes',   nome: 'Gomes',   senha: 'gomes72'    },
+  { id: 'joao',    nome: 'João',    senha: 'joao99'     },
+  { id: 'rodrigo', nome: 'Rodrigo', senha: 'rodrigo30'  },
+  { id: 'victor',  nome: 'Victor',  senha: 'victor95'   },
 ];
 
 // Roles sem senha (só nome)
