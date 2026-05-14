@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { MARCENEIROS } from '@/lib/auth';
 
 const fmtBRL = (v) =>
   v == null || isNaN(v)
@@ -26,37 +27,36 @@ const EMPTY_INPUTS = {
 };
 
 function calcular(inp) {
-  const pv       = parseFloat(inp.preco_venda)       || 0;
-  const m2e      = parseFloat(inp.m2_entregues)      || 0;
-  const metaE    = parseFloat(inp.meta_m2_entregues) || 800;
-  const folha    = parseFloat(inp.folha_fixa)        || 0;
-  const atraso   = parseFloat(inp.dias_atraso)       || 0;
-  const mat      = parseFloat(inp.custo_material)    || 0;
-  const hw       = parseFloat(inp.hardware)          || 0;
-  const curvos   = parseFloat(inp.lados_curvos)      || 0;
-  const ledFlag  = parseFloat(inp.led_pct)           || 0;
-  const transp   = parseFloat(inp.transporte)        || 0;
+  const pv      = parseFloat(inp.preco_venda)       || 0;
+  const m2e     = parseFloat(inp.m2_entregues)      || 0;
+  const metaE   = parseFloat(inp.meta_m2_entregues) || 800;
+  const folha   = parseFloat(inp.folha_fixa)        || 0;
+  const atraso  = parseFloat(inp.dias_atraso)       || 0;
+  const mat     = parseFloat(inp.custo_material)    || 0;
+  const hw      = parseFloat(inp.hardware)          || 0;
+  const curvos  = parseFloat(inp.lados_curvos)      || 0;
+  const ledFlag = parseFloat(inp.led_pct)           || 0;
+  const transp  = parseFloat(inp.transporte)        || 0;
 
-  const moBase       = metaE > 0 ? folha / metaE : 0;
-  const moTotal      = moBase * m2e;
-  const penPct       = -(Math.floor(atraso / 3) * 0.5);
-  const moPen        = moTotal * (1 + penPct / 100);
-  const pcp          = moPen * 0.4;
-  const curvo        = curvos * 2000;
-  const comissao     = pv * 0.05;
-  const ledBase      = mat + moPen + pcp;
-  const led          = ledBase * (ledFlag / 100);
-  const totalCustos  = mat + hw + moPen + pcp + curvo + comissao + led + transp;
-  const mc           = pv - totalCustos;
-  const mcPct        = pv > 0 ? (mc / pv) * 100 : 0;
-  const cfAlocado    = 135000 / 30;
-  const lucro        = mc - cfAlocado;
-  const margemLiq    = pv > 0 ? (lucro / pv) * 100 : 0;
+  const moBase      = metaE > 0 ? folha / metaE : 0;
+  const moTotal     = moBase * m2e;
+  const penPct      = -(Math.floor(atraso / 3) * 0.5);
+  const moPen       = moTotal * (1 + penPct / 100);
+  const pcp         = moPen * 0.4;
+  const curvo       = curvos * 2000;
+  const comissao    = pv * 0.05;
+  const ledBase     = mat + moPen + pcp;
+  const led         = ledBase * (ledFlag / 100);
+  const totalCustos = mat + hw + moPen + pcp + curvo + comissao + led + transp;
+  const mc          = pv - totalCustos;
+  const mcPct       = pv > 0 ? (mc / pv) * 100 : 0;
+  const cfAlocado   = 135000 / 30;
+  const lucro       = mc - cfAlocado;
+  const margemLiq   = pv > 0 ? (lucro / pv) * 100 : 0;
 
   return { moBase, moTotal, penPct, moPen, pcp, curvo, comissao, led, totalCustos, mc, mcPct, cfAlocado, lucro, margemLiq };
 }
 
-// ── Linha de resultado ──────────────────────────────────────────────────────
 function CalcRow({ label, value, highlight }) {
   return (
     <div className={`flex justify-between items-center py-1.5 px-3 rounded-lg ${highlight ? 'bg-navy/10 font-semibold' : ''}`}>
@@ -66,7 +66,6 @@ function CalcRow({ label, value, highlight }) {
   );
 }
 
-// ── Campo numérico ──────────────────────────────────────────────────────────
 function NumInput({ label, value, onChange, prefix, suffix }) {
   return (
     <div>
@@ -85,43 +84,53 @@ function NumInput({ label, value, onChange, prefix, suffix }) {
   );
 }
 
-// ── Formulário de registro ──────────────────────────────────────────────────
+// ── Formulário ──────────────────────────────────────────────────────────────
 function RecordForm({ initial, onSave, onCancel }) {
   const today = new Date().toISOString().slice(0, 10);
-  const [nome, setNome] = useState(initial?.nome_projeto || '');
-  const [data, setData] = useState(initial?.data || today);
-  const [inp, setInp] = useState(initial?.inputs || { ...EMPTY_INPUTS });
-  const [funcs, setFuncs] = useState(initial?.funcionarios || []);
-  const [saving, setSaving] = useState(false);
+  const [nome, setNome]       = useState(initial?.nome_projeto || '');
+  const [data, setData]       = useState(initial?.data || today);
+  const [dataLim, setDataLim] = useState(initial?.data_limite || '');
+  const [inp, setInp]         = useState(initial?.inputs || { ...EMPTY_INPUTS });
+  const [funcs, setFuncs]     = useState(initial?.funcionarios || []);
+  const [tercs, setTercs]     = useState(initial?.terceirizados || []);
+  const [saving, setSaving]   = useState(false);
 
   const setF = (k) => (v) => setInp((p) => ({ ...p, [k]: v }));
-
   const calc = calcular(inp);
+  const pv   = parseFloat(inp.preco_venda) || 0;
 
-  const addFunc = () => setFuncs((p) => [...p, { id: Date.now().toString(), nome: '', percentual: '' }]);
+  // ── Marceneiros
+  const addFunc = () => setFuncs((p) => [...p, { id: Date.now().toString(), marceneiro_id: '', nome: '', percentual: '' }]);
   const removeFunc = (id) => setFuncs((p) => p.filter((f) => f.id !== id));
-  const updateFunc = (id, field, val) =>
-    setFuncs((p) => p.map((f) => (f.id === id ? { ...f, [field]: val } : f)));
+  const updateFunc = (id, field, val) => setFuncs((p) => p.map((f) => (f.id === id ? { ...f, [field]: val } : f)));
+
+  const handleSelectMarceneiro = (id, mid) => {
+    const m = MARCENEIROS.find((x) => x.id === mid);
+    setFuncs((p) => p.map((f) => f.id === id ? { ...f, marceneiro_id: mid, nome: m ? m.nome : '' } : f));
+  };
+
+  // ── Terceirizados
+  const addTerc = () => setTercs((p) => [...p, { id: Date.now().toString(), nome: '', percentual: '', valor_pago: '' }]);
+  const removeTerc = (id) => setTercs((p) => p.filter((t) => t.id !== id));
+  const updateTerc = (id, field, val) => setTercs((p) => p.map((t) => (t.id === id ? { ...t, [field]: val } : t)));
 
   const handleSave = async () => {
     if (!nome.trim()) return alert('Informe o nome do projeto.');
     setSaving(true);
-    const record = {
+    await onSave({
       id: initial?.id || Date.now().toString(),
       nome_projeto: nome.trim(),
       data,
+      data_limite: dataLim,
       inputs: inp,
       funcionarios: funcs,
-    };
-    await onSave(record);
+      terceirizados: tercs,
+    });
     setSaving(false);
   };
 
-  const pv = parseFloat(inp.preco_venda) || 0;
-
   return (
     <div className="bg-white rounded-2xl shadow-md overflow-hidden mb-4">
-      {/* Header */}
       <div className="bg-navy px-4 py-3 flex items-center justify-between">
         <span className="text-sm font-bold text-white">{initial ? 'Editar Registro' : 'Novo Registro'}</span>
         <button onClick={onCancel} className="text-white/50 hover:text-white text-xs">Cancelar</button>
@@ -132,21 +141,18 @@ function RecordForm({ initial, onSave, onCancel }) {
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
             <label className="block text-xs text-gray-500 mb-1">Nome do Projeto / Cliente</label>
-            <input
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Ex: Obra Silva - Cozinha"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-gold"
-            />
+            <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Obra Silva - Cozinha"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-gold" />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Data</label>
-            <input
-              type="date"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-gold"
-            />
+            <input type="date" value={data} onChange={(e) => setData(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-gold" />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Data Limite</label>
+            <input type="date" value={dataLim} onChange={(e) => setDataLim(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-gold" />
           </div>
         </div>
 
@@ -166,11 +172,8 @@ function RecordForm({ initial, onSave, onCancel }) {
             <NumInput label="Lados Curvos (qtd)" value={inp.lados_curvos} onChange={setF('lados_curvos')} />
             <div>
               <label className="block text-xs text-gray-500 mb-1">LED %</label>
-              <select
-                value={inp.led_pct}
-                onChange={(e) => setF('led_pct')(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-gold"
-              >
+              <select value={inp.led_pct} onChange={(e) => setF('led_pct')(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-gold">
                 <option value={0}>0%</option>
                 <option value={3}>3%</option>
                 <option value={6}>6%</option>
@@ -203,62 +206,55 @@ function RecordForm({ initial, onSave, onCancel }) {
           </div>
         )}
 
-        {/* Equipe / Bonificação */}
+        {/* Marceneiros */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-bold text-navy uppercase tracking-wide">Bonificação por Funcionário</p>
-            <button
-              onClick={addFunc}
-              className="text-xs bg-navy text-white px-3 py-1.5 rounded-lg font-semibold"
-            >
+            <p className="text-xs font-bold text-navy uppercase tracking-wide">Bonificação — Marceneiros</p>
+            <button onClick={addFunc} className="text-xs bg-navy text-white px-3 py-1.5 rounded-lg font-semibold">
               + Funcionário
             </button>
           </div>
-
-          {funcs.length === 0 && (
-            <p className="text-xs text-gray-400 text-center py-3">Nenhum funcionário adicionado.</p>
-          )}
-
+          {funcs.length === 0 && <p className="text-xs text-gray-400 text-center py-2">Nenhum marceneiro adicionado.</p>}
           <div className="space-y-2">
             {funcs.map((f) => {
-              const pctVal = parseFloat(f.percentual) || 0;
-              const bonif = pv > 0 ? (pctVal / 100) * pv : 0;
+              const bonif = pv > 0 ? ((parseFloat(f.percentual) || 0) / 100) * pv : 0;
               return (
-                <div key={f.id} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
-                  <input
-                    value={f.nome}
-                    onChange={(e) => updateFunc(f.id, 'nome', e.target.value)}
-                    placeholder="Nome"
-                    className="flex-1 min-w-0 bg-transparent text-sm focus:outline-none"
-                  />
-                  <div className="relative w-20">
-                    <input
-                      type="number"
-                      value={f.percentual}
-                      onChange={(e) => updateFunc(f.id, 'percentual', e.target.value)}
-                      placeholder="0"
-                      className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:border-gold pr-5"
-                    />
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                <div key={f.id} className="bg-gray-50 rounded-xl px-3 py-2 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={f.marceneiro_id || ''}
+                      onChange={(e) => handleSelectMarceneiro(f.id, e.target.value)}
+                      className="flex-1 bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-gold"
+                    >
+                      <option value="">Selecionar marceneiro...</option>
+                      {MARCENEIROS.map((m) => (
+                        <option key={m.id} value={m.id}>{m.nome}</option>
+                      ))}
+                    </select>
+                    <button onClick={() => removeFunc(f.id)} className="text-gray-300 hover:text-red-400 flex-shrink-0">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                      </svg>
+                    </button>
                   </div>
-                  <div className="w-28 text-right">
-                    <span className={`text-sm font-semibold font-mono ${bonif > 0 ? 'text-green-700' : 'text-gray-400'}`}>
+                  <div className="flex items-center gap-2">
+                    <div className="relative w-24">
+                      <input type="number" value={f.percentual} onChange={(e) => updateFunc(f.id, 'percentual', e.target.value)}
+                        placeholder="0"
+                        className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:border-gold pr-5" />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                    </div>
+                    <span className={`text-sm font-semibold font-mono flex-1 text-right ${bonif > 0 ? 'text-green-700' : 'text-gray-400'}`}>
                       {pv > 0 ? fmtBRL(bonif) : '—'}
                     </span>
                   </div>
-                  <button onClick={() => removeFunc(f.id)} className="text-gray-300 hover:text-red-400 ml-1">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                      <path d="M18 6L6 18M6 6l12 12" />
-                    </svg>
-                  </button>
                 </div>
               );
             })}
           </div>
-
           {funcs.length > 0 && pv > 0 && (
             <div className="mt-2 flex justify-between items-center px-3 py-2 bg-navy/5 rounded-xl">
-              <span className="text-xs text-gray-500 font-semibold">Total bonificado</span>
+              <span className="text-xs text-gray-500 font-semibold">Total marceneiros</span>
               <span className="text-sm font-bold text-navy font-mono">
                 {fmtBRL(funcs.reduce((acc, f) => acc + ((parseFloat(f.percentual) || 0) / 100) * pv, 0))}
               </span>
@@ -266,11 +262,53 @@ function RecordForm({ initial, onSave, onCancel }) {
           )}
         </div>
 
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full bg-gold text-white py-3 rounded-xl font-bold text-sm disabled:opacity-50"
-        >
+        {/* Terceirizados */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-bold text-navy uppercase tracking-wide">Terceirizados</p>
+            <button onClick={addTerc} className="text-xs bg-navy/80 text-white px-3 py-1.5 rounded-lg font-semibold">
+              + Terceirizado
+            </button>
+          </div>
+          {tercs.length === 0 && <p className="text-xs text-gray-400 text-center py-2">Nenhum terceirizado.</p>}
+          <div className="space-y-2">
+            {tercs.map((t) => {
+              const bonif = pv > 0 ? ((parseFloat(t.percentual) || 0) / 100) * pv : 0;
+              return (
+                <div key={t.id} className="bg-amber-50 rounded-xl px-3 py-2 space-y-1.5 border border-amber-100">
+                  <div className="flex items-center gap-2">
+                    <input value={t.nome} onChange={(e) => updateTerc(t.id, 'nome', e.target.value)}
+                      placeholder="Nome do terceirizado"
+                      className="flex-1 bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-gold" />
+                    <button onClick={() => removeTerc(t.id)} className="text-gray-300 hover:text-red-400 flex-shrink-0">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative w-20">
+                      <input type="number" value={t.percentual} onChange={(e) => updateTerc(t.id, 'percentual', e.target.value)}
+                        placeholder="0"
+                        className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:border-gold pr-5" />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                    </div>
+                    <span className="text-xs text-gray-500">calc: {pv > 0 ? fmtBRL(bonif) : '—'}</span>
+                    <div className="relative flex-1">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">R$</span>
+                      <input type="number" value={t.valor_pago} onChange={(e) => updateTerc(t.id, 'valor_pago', e.target.value)}
+                        placeholder="Valor pago"
+                        className="w-full bg-white border border-amber-200 rounded-lg pl-7 pr-2 py-1 text-sm focus:outline-none focus:border-gold" />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <button onClick={handleSave} disabled={saving}
+          className="w-full bg-gold text-white py-3 rounded-xl font-bold text-sm disabled:opacity-50">
           {saving ? 'Salvando...' : 'Salvar Registro'}
         </button>
       </div>
@@ -282,7 +320,7 @@ function RecordForm({ initial, onSave, onCancel }) {
 function RecordCard({ record, onEdit, onDelete }) {
   const [open, setOpen] = useState(false);
   const calc = calcular(record.inputs || {});
-  const pv = parseFloat(record.inputs?.preco_venda) || 0;
+  const pv   = parseFloat(record.inputs?.preco_venda) || 0;
 
   const mcColor =
     calc.mcPct >= 70 ? 'text-green-600' :
@@ -290,20 +328,23 @@ function RecordCard({ record, onEdit, onDelete }) {
 
   return (
     <div className="bg-white rounded-xl shadow-sm mb-2 overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left"
-      >
+      <button type="button" onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-400">{fmtDate(record.data)}</span>
+            {record.data_limite && (
+              <span className="text-xs text-gray-400">· limite {fmtDate(record.data_limite)}</span>
+            )}
           </div>
           <p className="text-sm font-semibold text-gray-800 truncate mt-0.5">{record.nome_projeto}</p>
           <div className="flex items-center gap-3 mt-0.5">
             <span className="text-xs text-gray-500">PV: {fmtBRL(pv)}</span>
             {pv > 0 && <span className={`text-xs font-semibold ${mcColor}`}>MC {fmtPct(calc.mcPct)}</span>}
-            <span className="text-xs text-gray-400">{record.funcionarios?.length || 0} func.</span>
+            <span className="text-xs text-gray-400">{record.funcionarios?.length || 0} marc.</span>
+            {record.terceirizados?.length > 0 && (
+              <span className="text-xs text-amber-600">{record.terceirizados.length} terc.</span>
+            )}
           </div>
         </div>
         <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
@@ -314,10 +355,10 @@ function RecordCard({ record, onEdit, onDelete }) {
 
       {open && (
         <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">
-          {/* Funcionários */}
+          {/* Marceneiros */}
           {record.funcionarios?.length > 0 && (
             <div>
-              <p className="text-xs font-bold text-gray-500 uppercase mb-2">Bonificações</p>
+              <p className="text-xs font-bold text-gray-500 uppercase mb-2">Marceneiros</p>
               <div className="space-y-1.5">
                 {record.funcionarios.map((f) => {
                   const bonif = pv > 0 ? ((parseFloat(f.percentual) || 0) / 100) * pv : 0;
@@ -332,16 +373,34 @@ function RecordCard({ record, onEdit, onDelete }) {
                   );
                 })}
               </div>
-              <div className="mt-2 flex justify-between text-xs font-bold border-t border-gray-100 pt-2">
-                <span className="text-gray-500">Total</span>
-                <span className="text-navy font-mono">
-                  {fmtBRL(record.funcionarios.reduce((acc, f) => acc + ((parseFloat(f.percentual) || 0) / 100) * pv, 0))}
-                </span>
+            </div>
+          )}
+
+          {/* Terceirizados */}
+          {record.terceirizados?.length > 0 && (
+            <div>
+              <p className="text-xs font-bold text-amber-600 uppercase mb-2">Terceirizados</p>
+              <div className="space-y-1.5">
+                {record.terceirizados.map((t) => {
+                  const bonif = pv > 0 ? ((parseFloat(t.percentual) || 0) / 100) * pv : 0;
+                  const pago  = parseFloat(t.valor_pago);
+                  return (
+                    <div key={t.id} className="flex justify-between items-center">
+                      <span className="text-sm text-gray-700">{t.nome || '—'}</span>
+                      <div className="flex items-center gap-2 flex-wrap justify-end">
+                        <span className="text-xs text-gray-400">{t.percentual || 0}% → {fmtBRL(bonif)}</span>
+                        {!isNaN(pago) && pago > 0 && (
+                          <span className="text-xs font-semibold text-amber-700 font-mono">pago: {fmtBRL(pago)}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
-          {/* Resumo dos cálculos */}
+          {/* Resumo */}
           {pv > 0 && (
             <div>
               <p className="text-xs font-bold text-gray-500 uppercase mb-1">Resumo</p>
@@ -365,13 +424,9 @@ function RecordCard({ record, onEdit, onDelete }) {
 
           <div className="flex gap-2 pt-1">
             <button onClick={() => onEdit(record)}
-              className="flex-1 py-2 rounded-lg bg-navy/10 text-navy text-xs font-semibold">
-              Editar
-            </button>
+              className="flex-1 py-2 rounded-lg bg-navy/10 text-navy text-xs font-semibold">Editar</button>
             <button onClick={() => onDelete(record.id)}
-              className="flex-1 py-2 rounded-lg bg-red-50 text-red-500 text-xs font-semibold">
-              Excluir
-            </button>
+              className="flex-1 py-2 rounded-lg bg-red-50 text-red-500 text-xs font-semibold">Excluir</button>
           </div>
         </div>
       )}
@@ -381,10 +436,10 @@ function RecordCard({ record, onEdit, onDelete }) {
 
 // ── Tab principal ───────────────────────────────────────────────────────────
 export default function BonificacaoTab() {
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [records, setRecords]   = useState([]);
+  const [loading, setLoading]   = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState(null);
+  const [editing, setEditing]   = useState(null);
 
   const fetchRecords = useCallback(async () => {
     setLoading(true);
@@ -428,11 +483,7 @@ export default function BonificacaoTab() {
   if (showForm) {
     return (
       <div className="px-4 pt-4">
-        <RecordForm
-          initial={editing}
-          onSave={handleSave}
-          onCancel={() => { setShowForm(false); setEditing(null); }}
-        />
+        <RecordForm initial={editing} onSave={handleSave} onCancel={() => { setShowForm(false); setEditing(null); }} />
       </div>
     );
   }
@@ -441,17 +492,11 @@ export default function BonificacaoTab() {
     <div className="px-4 pt-4 pb-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-bold text-navy">Bonificação</h2>
-        <button
-          onClick={() => { setEditing(null); setShowForm(true); }}
-          className="bg-gold text-white text-xs font-bold px-4 py-2 rounded-lg"
-        >
-          + Novo
-        </button>
+        <button onClick={() => { setEditing(null); setShowForm(true); }}
+          className="bg-gold text-white text-xs font-bold px-4 py-2 rounded-lg">+ Novo</button>
       </div>
 
-      {loading && (
-        <p className="text-sm text-gray-400 text-center py-8">Carregando...</p>
-      )}
+      {loading && <p className="text-sm text-gray-400 text-center py-8">Carregando...</p>}
 
       {!loading && records.length === 0 && (
         <div className="text-center py-10">

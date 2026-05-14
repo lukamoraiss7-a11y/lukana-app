@@ -17,6 +17,15 @@ const ROLE_SENHAS = {
   ariel:                process.env.NEXT_PUBLIC_ARIEL_PASS      || 'ariellkn',
 };
 
+// Marceneiros — acesso individual a /meu-bonus
+export const MARCENEIROS = [
+  { id: 'jean',    nome: 'Jean',    senha: 'prd74jn' },
+  { id: 'gomes',   nome: 'Gomes',   senha: 'fab38gm' },
+  { id: 'joao',    nome: 'João',    senha: 'mrc92jx' },
+  { id: 'rodrigo', nome: 'Rodrigo', senha: 'ops56rd' },
+  { id: 'victor',  nome: 'Victor',  senha: 'lkn83vc' },
+];
+
 // Roles sem senha (só nome)
 const ROLES_SEM_SENHA = ['marceneiro', 'montador', 'auxiliar', 'cnc'];
 

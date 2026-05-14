@@ -45,6 +45,12 @@ export default function Home() {
         >
           Sou da Equipe
         </Link>
+        <Link
+          href="/meu-bonus"
+          className="block w-full py-4 rounded-2xl text-center font-bold text-base text-white border-2 border-gold/40 bg-gold/10 active:opacity-80 transition-opacity"
+        >
+          Minha Bonificação
+        </Link>
 
         <Link
           href="/projetos"
