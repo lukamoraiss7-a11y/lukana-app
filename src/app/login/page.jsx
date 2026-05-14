@@ -283,7 +283,9 @@ function LoginForm() {
       {nextUrl === '/gerente'       && <GerenteLogin onSuccess={onSuccess} />}
       {nextUrl === '/coordenadores' && <CoordLogin   onSuccess={onSuccess} presetRole={roleParam} />}
       {nextUrl === '/equipe'        && <EquipeLogin  onSuccess={onSuccess} onMarceneiroBonus={(user) => {
+          // Seta sessão bonus (para /meu-bonus) E sessão principal (para /equipe)
           localStorage.setItem('lukana_mbonus_session', JSON.stringify(user));
+          localStorage.setItem('lukana_session', JSON.stringify({ id: user.id, role: 'marceneiro', nome: user.nome }));
           router.push('/meu-bonus');
         }} />}
       {nextUrl === '/ceo' && roleParam === 'ariel' && <ArielLogin onSuccess={onSuccess} />}

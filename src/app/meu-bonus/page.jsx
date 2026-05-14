@@ -224,6 +224,7 @@ export default function MeuBonusPage() {
   const [records, setRecords]   = useState([]);
   const [loading, setLoading]   = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [tab, setTab]           = useState('meudia');
 
   useEffect(() => {
     const saved = localStorage.getItem(SESSION_KEY);
@@ -235,11 +236,14 @@ export default function MeuBonusPage() {
 
   const handleLogin = useCallback((user) => {
     localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+    // Seta também a sessão principal para o /equipe funcionar
+    localStorage.setItem('lukana_session', JSON.stringify({ id: user.id, role: 'marceneiro', nome: user.nome }));
     setSession(user);
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem('lukana_session');
     setSession(null);
     setRecords([]);
   };
@@ -283,35 +287,60 @@ export default function MeuBonusPage() {
         </button>
       </header>
 
-      <main className="flex-1 mt-14 px-4 pt-4 pb-6">
-        <h2 className="text-base font-bold text-navy mb-4">Minha Bonificação</h2>
+      {/* Tab bar */}
+      <nav className="fixed top-14 left-0 right-0 z-30 h-11 bg-white border-b border-gray-200 flex">
+        <button onClick={() => setTab('meudia')}
+          className={`flex-1 text-xs font-bold uppercase tracking-wide transition-colors ${tab === 'meudia' ? 'text-navy border-b-2 border-navy' : 'text-gray-400'}`}>
+          Meu Dia
+        </button>
+        <button onClick={() => setTab('bonificacao')}
+          className={`flex-1 text-xs font-bold uppercase tracking-wide transition-colors ${tab === 'bonificacao' ? 'text-navy border-b-2 border-navy' : 'text-gray-400'}`}>
+          Bonificação
+        </button>
+      </nav>
 
-        {loading && <p className="text-sm text-gray-400 text-center py-10">Carregando...</p>}
+      {/* Meu Dia — iframe do /equipe */}
+      {tab === 'meudia' && (
+        <div className="flex-1 mt-25" style={{ marginTop: '6.25rem' }}>
+          <iframe
+            src="/equipe"
+            className="w-full border-0"
+            style={{ height: 'calc(100dvh - 6.25rem)' }}
+            title="Meu Dia"
+          />
+        </div>
+      )}
 
-        {!loading && records.length === 0 && (
-          <div className="text-center py-14">
-            <p className="text-sm text-gray-400">Nenhuma bonificação registrada ainda.</p>
-          </div>
-        )}
+      {/* Bonificação */}
+      {tab === 'bonificacao' && (
+        <main className="flex-1 px-4 pt-4 pb-6" style={{ marginTop: '6.25rem' }}>
+          {loading && <p className="text-sm text-gray-400 text-center py-10">Carregando...</p>}
 
-        {!loading && ativos.length > 0 && (
-          <div className="mb-5">
-            <p className="text-xs font-bold text-gray-500 uppercase mb-3">Em andamento</p>
-            {ativos.map((r) => (
-              <BonusCard key={r.id} record={r} marceneiroId={session.id} />
-            ))}
-          </div>
-        )}
+          {!loading && records.length === 0 && (
+            <div className="text-center py-14">
+              <p className="text-sm text-gray-400">Nenhuma bonificação registrada ainda.</p>
+            </div>
+          )}
 
-        {!loading && passados.length > 0 && (
-          <div>
-            <p className="text-xs font-bold text-gray-500 uppercase mb-3">Anteriores</p>
-            {passados.map((r) => (
-              <BonusCard key={r.id} record={r} marceneiroId={session.id} />
-            ))}
-          </div>
-        )}
-      </main>
+          {!loading && ativos.length > 0 && (
+            <div className="mb-5">
+              <p className="text-xs font-bold text-gray-500 uppercase mb-3">Em andamento</p>
+              {ativos.map((r) => (
+                <BonusCard key={r.id} record={r} marceneiroId={session.id} />
+              ))}
+            </div>
+          )}
+
+          {!loading && passados.length > 0 && (
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase mb-3">Anteriores</p>
+              {passados.map((r) => (
+                <BonusCard key={r.id} record={r} marceneiroId={session.id} />
+              ))}
+            </div>
+          )}
+        </main>
+      )}
     </div>
   );
 }
