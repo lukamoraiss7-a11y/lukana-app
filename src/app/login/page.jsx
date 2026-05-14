@@ -10,7 +10,7 @@ const ROLE_CONFIG = {
   coordenador_obra:     { dest: '/coordenadores' },
   coordenador_projetos: { dest: '/coordenadores' },
   encarregado:          { dest: '/coordenadores' },
-  marceneiro:           { dest: '/meu-bonus'     },
+  marceneiro:           { dest: '/equipe'        },
   montador:             { dest: '/equipe'        },
   auxiliar:             { dest: '/equipe'        },
   cnc:                  { dest: '/cnc'           },
@@ -255,6 +255,11 @@ function LoginForm() {
   useEffect(() => {
     const session = getSession();
     if (session) {
+      // Marceneiro sempre vai para /meu-bonus independente do nextUrl
+      if (session.role === 'marceneiro') {
+        router.replace('/meu-bonus');
+        return;
+      }
       const sessionDest = ROLE_CONFIG[session.role]?.dest || '/';
       // Se a sessão atual não tem permissão para o destino solicitado, limpa e força novo login
       if (nextUrl !== '/' && sessionDest !== nextUrl) {
