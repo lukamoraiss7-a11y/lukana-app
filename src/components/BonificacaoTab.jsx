@@ -14,47 +14,52 @@ const fmtDate = (s) => { if (!s) return ''; const [y, m, d] = s.split('-'); retu
 const EMPTY_INPUTS = {
   preco_venda: '',
   m2_vendidos: '',
-  m2_entregues: '',
   meta_m2_vendidos: 800,
-  meta_m2_entregues: 800,
   dias_atraso: 0,
+  dias_adiantamento: 0,
   folha_fixa: 120000,
   custo_material: '',
-  hardware: '',
-  lados_curvos: 0,
-  led_pct: 0,
-  transporte: 600,
+  led_valor: 0,
+  custos_gerais: 0,
 };
 
-function calcular(inp) {
-  const pv      = parseFloat(inp.preco_venda)       || 0;
-  const m2e     = parseFloat(inp.m2_entregues)      || 0;
-  const metaE   = parseFloat(inp.meta_m2_entregues) || 800;
-  const folha   = parseFloat(inp.folha_fixa)        || 0;
-  const atraso  = parseFloat(inp.dias_atraso)       || 0;
-  const mat     = parseFloat(inp.custo_material)    || 0;
-  const hw      = parseFloat(inp.hardware)          || 0;
-  const curvos  = parseFloat(inp.lados_curvos)      || 0;
-  const ledFlag = parseFloat(inp.led_pct)           || 0;
-  const transp  = parseFloat(inp.transporte)        || 0;
+// penPct: 3d=-1%, 6d=-1.5%, 9d=-2%, +0.5% a cada 3d extras
+function calcPenPct(atraso) {
+  const periods = Math.floor(atraso / 3);
+  return periods > 0 ? -(0.5 * (1 + periods)) : 0;
+}
 
-  const moBase      = metaE > 0 ? folha / metaE : 0;
-  const moTotal     = moBase * m2e;
-  const penPct      = -(Math.floor(atraso / 3) * 0.5);
+// bonusPct: +0.5% a cada 5d adiantados (só se validado_vinny && validado_ana)
+function calcBonusPct(adiant, validVinny, validAna) {
+  if (!validVinny || !validAna) return 0;
+  const periods = Math.floor(adiant / 5);
+  return periods > 0 ? periods * 0.5 : 0;
+}
+
+function calcular(inp) {
+  const pv     = parseFloat(inp.preco_venda)      || 0;
+  const m2v    = parseFloat(inp.m2_vendidos)      || 0;
+  const metaV  = parseFloat(inp.meta_m2_vendidos) || 800;
+  const folha  = parseFloat(inp.folha_fixa)       || 0;
+  const atraso = parseFloat(inp.dias_atraso)      || 0;
+  const mat    = parseFloat(inp.custo_material)   || 0;
+  const ledV   = parseFloat(inp.led_valor)        || 0;
+  const custos = parseFloat(inp.custos_gerais)    || 0;
+
+  const moBase      = metaV > 0 ? folha / metaV : 0;
+  const moTotal     = moBase * m2v;
+  const penPct      = calcPenPct(atraso);
   const moPen       = moTotal * (1 + penPct / 100);
   const pcp         = moPen * 0.4;
-  const curvo       = curvos * 2000;
   const comissao    = pv * 0.05;
-  const ledBase     = mat + moPen + pcp;
-  const led         = ledBase * (ledFlag / 100);
-  const totalCustos = mat + hw + moPen + pcp + curvo + comissao + led + transp;
+  const totalCustos = mat + moPen + pcp + comissao + ledV + custos;
   const mc          = pv - totalCustos;
   const mcPct       = pv > 0 ? (mc / pv) * 100 : 0;
   const cfAlocado   = 135000 / 30;
   const lucro       = mc - cfAlocado;
   const margemLiq   = pv > 0 ? (lucro / pv) * 100 : 0;
 
-  return { moBase, moTotal, penPct, moPen, pcp, curvo, comissao, led, totalCustos, mc, mcPct, cfAlocado, lucro, margemLiq };
+  return { moBase, moTotal, penPct, moPen, pcp, comissao, totalCustos, mc, mcPct, cfAlocado, lucro, margemLiq };
 }
 
 function CalcRow({ label, value, highlight }) {
@@ -66,10 +71,11 @@ function CalcRow({ label, value, highlight }) {
   );
 }
 
-function NumInput({ label, value, onChange, prefix, suffix }) {
+function NumInput({ label, sublabel, value, onChange, prefix, suffix }) {
   return (
     <div>
-      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      <label className="block text-xs text-gray-500 mb-0.5">{label}</label>
+      {sublabel && <p className="text-[10px] text-gray-400 mb-1">{sublabel}</p>}
       <div className="relative">
         {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">{prefix}</span>}
         <input
@@ -87,29 +93,32 @@ function NumInput({ label, value, onChange, prefix, suffix }) {
 // ── Formulário ──────────────────────────────────────────────────────────────
 function RecordForm({ initial, onSave, onCancel }) {
   const today = new Date().toISOString().slice(0, 10);
-  const [nome, setNome]       = useState(initial?.nome_projeto || '');
-  const [data, setData]       = useState(initial?.data || today);
-  const [dataLim, setDataLim] = useState(initial?.data_limite || '');
-  const [inp, setInp]         = useState(initial?.inputs || { ...EMPTY_INPUTS });
-  const [funcs, setFuncs]     = useState(initial?.funcionarios || []);
-  const [tercs, setTercs]     = useState(initial?.terceirizados || []);
-  const [modulos, setModulos] = useState(initial?.modulos || []);
-  const [modInput, setModInput] = useState('');
-  const [saving, setSaving]   = useState(false);
+  const [nome, setNome]           = useState(initial?.nome_projeto || '');
+  const [data, setData]           = useState(initial?.data || today);
+  const [dataLim, setDataLim]     = useState(initial?.data_limite || '');
+  const [inp, setInp]             = useState(initial?.inputs || { ...EMPTY_INPUTS });
+  const [funcs, setFuncs]         = useState(initial?.funcionarios || []);
+  const [tercs, setTercs]         = useState(initial?.terceirizados || []);
+  const [modulos, setModulos]     = useState(initial?.modulos || []);
+  const [modInput, setModInput]   = useState('');
+  const [validVinny, setValidVinny] = useState(initial?.validado_vinny || false);
+  const [validAna, setValidAna]   = useState(initial?.validado_ana || false);
+  const [saving, setSaving]       = useState(false);
 
   const setF = (k) => (v) => setInp((p) => ({ ...p, [k]: v }));
   const calc = calcular(inp);
   const pv   = parseFloat(inp.preco_venda) || 0;
+  const adiant = parseFloat(inp.dias_adiantamento) || 0;
+  const bonusPct = calcBonusPct(adiant, validVinny, validAna);
 
   // ── Marceneiros
   const addFunc = () => setFuncs((p) => [...p, { id: Date.now().toString(), marceneiro_id: '', nome: '', percentual: '' }]);
   const removeFunc = (id) => setFuncs((p) => p.filter((f) => f.id !== id));
-  const updateFunc = (id, field, val) => setFuncs((p) => p.map((f) => (f.id === id ? { ...f, [field]: val } : f)));
-
   const handleSelectMarceneiro = (id, mid) => {
     const m = MARCENEIROS.find((x) => x.id === mid);
     setFuncs((p) => p.map((f) => f.id === id ? { ...f, marceneiro_id: mid, nome: m ? m.nome : '' } : f));
   };
+  const updateFunc = (id, field, val) => setFuncs((p) => p.map((f) => (f.id === id ? { ...f, [field]: val } : f)));
 
   // ── Terceirizados
   const addTerc = () => setTercs((p) => [...p, { id: Date.now().toString(), nome: '', percentual: '', valor_pago: '' }]);
@@ -129,6 +138,8 @@ function RecordForm({ initial, onSave, onCancel }) {
         modulos,
         funcionarios: funcs,
         terceirizados: tercs,
+        validado_vinny: validVinny,
+        validado_ana: validAna,
       });
     } finally {
       setSaving(false);
@@ -179,11 +190,9 @@ function RecordForm({ initial, onSave, onCancel }) {
               placeholder="Ex: Guarda Roupa, Painel..."
               className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-gold"
             />
-            <button
-              type="button"
+            <button type="button"
               onClick={() => { if (modInput.trim()) { setModulos((p) => [...p, modInput.trim()]); setModInput(''); } }}
-              className="px-3 py-2 bg-navy text-white text-xs font-bold rounded-lg"
-            >+</button>
+              className="px-3 py-2 bg-navy text-white text-xs font-bold rounded-lg">+</button>
           </div>
           {modulos.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
@@ -204,26 +213,46 @@ function RecordForm({ initial, onSave, onCancel }) {
           <div className="grid grid-cols-2 gap-3">
             <NumInput label="Preço de Venda (R$)" value={inp.preco_venda} onChange={setF('preco_venda')} prefix="R$" />
             <NumInput label="m² Vendidos" value={inp.m2_vendidos} onChange={setF('m2_vendidos')} suffix="m²" />
-            <NumInput label="m² Entregues" value={inp.m2_entregues} onChange={setF('m2_entregues')} suffix="m²" />
-            <NumInput label="Dias de Atraso" value={inp.dias_atraso} onChange={setF('dias_atraso')} />
             <NumInput label="Meta m² Vendidos" value={inp.meta_m2_vendidos} onChange={setF('meta_m2_vendidos')} suffix="m²" />
-            <NumInput label="Meta m² Entregues" value={inp.meta_m2_entregues} onChange={setF('meta_m2_entregues')} suffix="m²" />
             <NumInput label="Folha Fixa (R$)" value={inp.folha_fixa} onChange={setF('folha_fixa')} prefix="R$" />
             <NumInput label="Custo de Material (R$)" value={inp.custo_material} onChange={setF('custo_material')} prefix="R$" />
-            <NumInput label="Hardware (R$)" value={inp.hardware} onChange={setF('hardware')} prefix="R$" />
-            <NumInput label="Lados Curvos (qtd)" value={inp.lados_curvos} onChange={setF('lados_curvos')} />
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">LED %</label>
-              <select value={inp.led_pct} onChange={(e) => setF('led_pct')(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-gold">
-                <option value={0}>0%</option>
-                <option value={3}>3%</option>
-                <option value={6}>6%</option>
-              </select>
+            <NumInput label="LED (R$)" value={inp.led_valor} onChange={setF('led_valor')} prefix="R$" />
+            <div className="col-span-2">
+              <NumInput
+                label="Custos Gerais (R$)"
+                sublabel="alimentação, uber, gasolina e outros da obra"
+                value={inp.custos_gerais}
+                onChange={setF('custos_gerais')}
+                prefix="R$"
+              />
             </div>
-            <NumInput label="Transporte (R$)" value={inp.transporte} onChange={setF('transporte')} prefix="R$" />
+            <NumInput label="Dias de Atraso" value={inp.dias_atraso} onChange={setF('dias_atraso')} />
+            <NumInput label="Dias Adiantado" value={inp.dias_adiantamento} onChange={setF('dias_adiantamento')} />
           </div>
         </div>
+
+        {/* Validação de adiantamento */}
+        {adiant > 0 && (
+          <div className="bg-green-50 border border-green-100 rounded-xl p-3 space-y-2">
+            <p className="text-xs font-bold text-green-700 uppercase tracking-wide">
+              Validação de Adiantamento — {adiant}d adiantado → +{(Math.floor(adiant / 5) * 0.5).toFixed(1)}%
+            </p>
+            <p className="text-[11px] text-green-600">O bônus só é aplicado após Vinny e Ana validarem a qualidade da entrega.</p>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setValidVinny((v) => !v)}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold border-2 transition-all ${validVinny ? 'bg-green-600 border-green-600 text-white' : 'border-green-300 text-green-600 bg-white'}`}>
+                {validVinny ? '✓ Vinny validou' : 'Vinny — pendente'}
+              </button>
+              <button type="button" onClick={() => setValidAna((v) => !v)}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold border-2 transition-all ${validAna ? 'bg-green-600 border-green-600 text-white' : 'border-green-300 text-green-600 bg-white'}`}>
+                {validAna ? '✓ Ana validou' : 'Ana — pendente'}
+              </button>
+            </div>
+            {bonusPct > 0 && (
+              <p className="text-xs text-green-700 font-semibold text-center">Bônus ativo: +{bonusPct.toFixed(1)}%</p>
+            )}
+          </div>
+        )}
 
         {/* Cálculos */}
         {pv > 0 && (
@@ -235,9 +264,9 @@ function RecordForm({ initial, onSave, onCancel }) {
               <CalcRow label="Penalidade" value={fmtPct(calc.penPct)} />
               <CalcRow label="MO c/ Penalidade" value={fmtBRL(calc.moPen)} />
               <CalcRow label="PCP (40% MO)" value={fmtBRL(calc.pcp)} />
-              <CalcRow label="Curvos" value={fmtBRL(calc.curvo)} />
               <CalcRow label="Comissão (5%)" value={fmtBRL(calc.comissao)} />
-              <CalcRow label="LED" value={fmtBRL(calc.led)} />
+              <CalcRow label="LED" value={fmtBRL(parseFloat(inp.led_valor) || 0)} />
+              <CalcRow label="Custos Gerais" value={fmtBRL(parseFloat(inp.custos_gerais) || 0)} />
               <CalcRow label="Total Custos" value={fmtBRL(calc.totalCustos)} />
               <CalcRow label="Margem de Contribuição" value={fmtBRL(calc.mc)} highlight />
               <CalcRow label="MC %" value={fmtPct(calc.mcPct)} highlight />
@@ -259,7 +288,9 @@ function RecordForm({ initial, onSave, onCancel }) {
           {funcs.length === 0 && <p className="text-xs text-gray-400 text-center py-2">Nenhum marceneiro adicionado.</p>}
           <div className="space-y-2">
             {funcs.map((f) => {
-              const bonif = pv > 0 ? ((parseFloat(f.percentual) || 0) / 100) * pv : 0;
+              const basePct  = parseFloat(f.percentual) || 0;
+              const baseVal  = pv > 0 ? (basePct / 100) * pv : 0;
+              const bonif    = bonusPct > 0 ? baseVal * (1 + bonusPct / 100) : baseVal;
               return (
                 <div key={f.id} className="bg-gray-50 rounded-xl px-3 py-2 space-y-1.5">
                   <div className="flex items-center gap-2">
@@ -290,6 +321,11 @@ function RecordForm({ initial, onSave, onCancel }) {
                       {pv > 0 ? fmtBRL(bonif) : '—'}
                     </span>
                   </div>
+                  {bonusPct > 0 && pv > 0 && (
+                    <p className="text-[10px] text-green-600 text-right">
+                      base {fmtBRL(baseVal)} + bônus {fmtPct(bonusPct)}
+                    </p>
+                  )}
                 </div>
               );
             })}
@@ -298,7 +334,10 @@ function RecordForm({ initial, onSave, onCancel }) {
             <div className="mt-2 flex justify-between items-center px-3 py-2 bg-navy/5 rounded-xl">
               <span className="text-xs text-gray-500 font-semibold">Total marceneiros</span>
               <span className="text-sm font-bold text-navy font-mono">
-                {fmtBRL(funcs.reduce((acc, f) => acc + ((parseFloat(f.percentual) || 0) / 100) * pv, 0))}
+                {fmtBRL(funcs.reduce((acc, f) => {
+                  const baseVal = ((parseFloat(f.percentual) || 0) / 100) * pv;
+                  return acc + (bonusPct > 0 ? baseVal * (1 + bonusPct / 100) : baseVal);
+                }, 0))}
               </span>
             </div>
           )}
@@ -359,10 +398,12 @@ function RecordForm({ initial, onSave, onCancel }) {
 }
 
 // ── Card de registro ────────────────────────────────────────────────────────
-function RecordCard({ record, onEdit, onDelete }) {
+function RecordCard({ record, onEdit, onDelete, onValidate }) {
   const [open, setOpen] = useState(false);
-  const calc = calcular(record.inputs || {});
-  const pv   = parseFloat(record.inputs?.preco_venda) || 0;
+  const calc   = calcular(record.inputs || {});
+  const pv     = parseFloat(record.inputs?.preco_venda) || 0;
+  const adiant = parseFloat(record.inputs?.dias_adiantamento) || 0;
+  const bonusPct = calcBonusPct(adiant, record.validado_vinny, record.validado_ana);
 
   const mcColor =
     calc.mcPct >= 70 ? 'text-green-600' :
@@ -377,6 +418,11 @@ function RecordCard({ record, onEdit, onDelete }) {
             <span className="text-xs text-gray-400">{fmtDate(record.data)}</span>
             {record.data_limite && (
               <span className="text-xs text-gray-400">· limite {fmtDate(record.data_limite)}</span>
+            )}
+            {adiant > 0 && (
+              <span className={`text-xs font-bold ${bonusPct > 0 ? 'text-green-600' : 'text-amber-500'}`}>
+                +{adiant}d {bonusPct > 0 ? `✓ +${bonusPct.toFixed(1)}%` : '(validação pendente)'}
+              </span>
             )}
           </div>
           <p className="text-sm font-semibold text-gray-800 truncate mt-0.5">{record.nome_projeto}</p>
@@ -408,13 +454,15 @@ function RecordCard({ record, onEdit, onDelete }) {
               </div>
             </div>
           )}
+
           {/* Marceneiros */}
           {record.funcionarios?.length > 0 && (
             <div>
               <p className="text-xs font-bold text-gray-500 uppercase mb-2">Marceneiros</p>
               <div className="space-y-1.5">
                 {record.funcionarios.map((f) => {
-                  const bonif = pv > 0 ? ((parseFloat(f.percentual) || 0) / 100) * pv : 0;
+                  const baseVal = pv > 0 ? ((parseFloat(f.percentual) || 0) / 100) * pv : 0;
+                  const bonif   = bonusPct > 0 ? baseVal * (1 + bonusPct / 100) : baseVal;
                   return (
                     <div key={f.id} className="flex justify-between items-center">
                       <span className="text-sm text-gray-700">{f.nome || '—'}</span>
@@ -450,6 +498,31 @@ function RecordCard({ record, onEdit, onDelete }) {
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Validação de adiantamento */}
+          {adiant > 0 && (
+            <div className="bg-green-50 border border-green-100 rounded-xl p-3 space-y-2">
+              <p className="text-xs font-bold text-green-700">
+                Adiantamento: {adiant}d → bônus potencial +{(Math.floor(adiant / 5) * 0.5).toFixed(1)}%
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onValidate(record.id, 'validado_vinny', !record.validado_vinny)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold border-2 transition-all ${record.validado_vinny ? 'bg-green-600 border-green-600 text-white' : 'border-green-300 text-green-700 bg-white'}`}>
+                  {record.validado_vinny ? '✓ Vinny' : 'Vinny'}
+                </button>
+                <button
+                  onClick={() => onValidate(record.id, 'validado_ana', !record.validado_ana)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold border-2 transition-all ${record.validado_ana ? 'bg-green-600 border-green-600 text-white' : 'border-green-300 text-green-700 bg-white'}`}>
+                  {record.validado_ana ? '✓ Ana' : 'Ana'}
+                </button>
+              </div>
+              {bonusPct > 0
+                ? <p className="text-xs text-green-700 font-semibold text-center">Bônus aplicado: +{bonusPct.toFixed(1)}%</p>
+                : <p className="text-[11px] text-green-600 text-center">Pendente: ambos precisam validar</p>
+              }
             </div>
           )}
 
@@ -534,6 +607,18 @@ export default function BonificacaoTab() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleValidate = async (id, field, value) => {
+    const record = records.find((r) => r.id === id);
+    if (!record) return;
+    const updated = { ...record, [field]: value };
+    await fetch('/api/bonificacao', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated),
+    });
+    await fetchRecords();
+  };
+
   if (showForm) {
     return (
       <div className="px-4 pt-4">
@@ -560,7 +645,7 @@ export default function BonificacaoTab() {
       )}
 
       {!loading && records.map((r) => (
-        <RecordCard key={r.id} record={r} onEdit={handleEdit} onDelete={handleDelete} />
+        <RecordCard key={r.id} record={r} onEdit={handleEdit} onDelete={handleDelete} onValidate={handleValidate} />
       ))}
     </div>
   );

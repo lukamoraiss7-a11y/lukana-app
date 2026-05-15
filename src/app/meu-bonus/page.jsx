@@ -35,18 +35,23 @@ function calcDiasRestantes(dataLimite) {
   return Math.floor((limite - hoje) / 86400000);
 }
 
-function calcDesconto(bonif, diasAtraso) {
-  const penPct = Math.floor(diasAtraso / 3) * 0.5;
-  return bonif * (penPct / 100);
+// penPct: 3d=-1%, 6d=-1.5%, 9d=-2%, +0.5% a cada 3d
+function calcPenPct(diasAtraso) {
+  const periods = Math.floor(diasAtraso / 3);
+  return periods > 0 ? 0.5 * (1 + periods) : 0;
+}
+
+// bonusPct: +0.5% a cada 5d (só se Vinny e Ana validaram)
+function calcBonusPct(record) {
+  const adiant = parseFloat(record.inputs?.dias_adiantamento) || 0;
+  if (!record.validado_vinny || !record.validado_ana || adiant <= 0) return 0;
+  return Math.floor(adiant / 5) * 0.5;
 }
 
 // ── Card de bonificação do marceneiro ───────────────────────────────────────
 function BonusCard({ record, marceneiroId }) {
-  const [now, setNow] = useState(Date.now());
-
-  // Atualiza o clock a cada minuto (desconto em tempo real)
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 60000);
+    const t = setInterval(() => {}, 60000);
     return () => clearInterval(t);
   }, []);
 
@@ -59,9 +64,12 @@ function BonusCard({ record, marceneiroId }) {
 
   const diasAtraso    = calcAtrasoHoje(record.data_limite);
   const diasRestantes = calcDiasRestantes(record.data_limite);
-  const desconto      = calcDesconto(bonif, diasAtraso);
-  const valorLiquido  = bonif - desconto;
-  const penPct        = Math.floor(diasAtraso / 3) * 0.5;
+  const penPct        = calcPenPct(diasAtraso);
+  const bonusPct      = calcBonusPct(record);
+  const desconto      = bonif * (penPct / 100);
+  const bonus         = bonif * (bonusPct / 100);
+  const valorLiquido  = bonif - desconto + bonus;
+  const adiant        = parseFloat(record.inputs?.dias_adiantamento) || 0;
 
   const statusColor =
     diasRestantes === null ? 'text-gray-400' :
@@ -99,28 +107,49 @@ function BonusCard({ record, marceneiroId }) {
             </div>
           </div>
         )}
+
         {/* Valor base */}
         <div className="flex justify-between items-center">
           <span className="text-xs text-gray-500">Sua bonificação ({pct}%)</span>
           <span className="text-base font-bold text-navy font-mono">{fmtBRL(bonif)}</span>
         </div>
 
-        {/* Desconto */}
-        {diasAtraso > 0 ? (
+        {/* Desconto por atraso */}
+        {diasAtraso > 0 && (
           <div className="bg-red-50 rounded-xl px-3 py-2 space-y-1">
             <div className="flex justify-between items-center">
               <span className="text-xs text-red-600 font-semibold">Desconto por atraso</span>
               <span className="text-sm font-bold text-red-700 font-mono">- {fmtBRL(desconto)}</span>
             </div>
             <p className="text-[11px] text-red-400">
-              {diasAtraso}d atrasado → -{penPct.toFixed(1)}% ({Math.floor(diasAtraso / 3)} períodos de 3 dias)
+              {diasAtraso}d atrasado → -{penPct.toFixed(1)}% (3d=-1%, 6d=-1,5%, +0,5% a cada 3d)
             </p>
           </div>
-        ) : (
+        )}
+
+        {/* Bônus por adiantamento */}
+        {adiant > 0 && (
+          <div className={`rounded-xl px-3 py-2 space-y-1 ${bonusPct > 0 ? 'bg-green-50' : 'bg-gray-50'}`}>
+            {bonusPct > 0 ? (
+              <>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-green-600 font-semibold">Bônus por adiantamento</span>
+                  <span className="text-sm font-bold text-green-700 font-mono">+ {fmtBRL(bonus)}</span>
+                </div>
+                <p className="text-[11px] text-green-600">{adiant}d adiantado → +{bonusPct.toFixed(1)}%</p>
+              </>
+            ) : (
+              <p className="text-xs text-gray-400">{adiant}d adiantado — aguardando validação de Vinny e Ana.</p>
+            )}
+          </div>
+        )}
+
+        {/* Sem desconto / sem adiantamento */}
+        {diasAtraso === 0 && adiant === 0 && (
           <div className="bg-gray-50 rounded-xl px-3 py-2">
             <p className="text-xs text-gray-400">
               {diasRestantes !== null && diasRestantes > 0
-                ? `Sem desconto agora. Cada 3 dias de atraso = -0,5% (${fmtBRL(bonif * 0.005)} por período).`
+                ? 'Sem desconto agora. Atraso: 3d=-1%, 6d=-1,5%, +0,5% a cada 3d.'
                 : diasRestantes === 0
                 ? 'Vence hoje. Entregue a tempo para evitar desconto.'
                 : 'Sem prazo definido.'}
@@ -131,7 +160,7 @@ function BonusCard({ record, marceneiroId }) {
         {/* Valor líquido */}
         <div className="border-t border-gray-100 pt-3 flex justify-between items-center">
           <span className="text-sm font-bold text-gray-600">
-            {diasAtraso > 0 ? 'Você receberá' : 'Você pode receber'}
+            {diasAtraso > 0 ? 'Você receberá' : bonusPct > 0 ? 'Você receberá (c/ bônus)' : 'Você pode receber'}
           </span>
           <span className={`text-xl font-bold font-mono ${diasAtraso > 0 ? 'text-red-700' : 'text-green-700'}`}>
             {fmtBRL(valorLiquido)}
@@ -139,9 +168,9 @@ function BonusCard({ record, marceneiroId }) {
         </div>
 
         {/* Projeção se atrasar */}
-        {diasAtraso === 0 && diasRestantes !== null && diasRestantes >= 0 && (
+        {diasAtraso === 0 && diasRestantes !== null && diasRestantes >= 0 && adiant === 0 && (
           <div className="text-[11px] text-gray-400 text-center">
-            Se atrasar 3 dias: {fmtBRL(bonif - bonif * 0.005)} · 6 dias: {fmtBRL(bonif - bonif * 0.01)} · 9 dias: {fmtBRL(bonif - bonif * 0.015)}
+            Se atrasar 3 dias: {fmtBRL(bonif * 0.99)} · 6 dias: {fmtBRL(bonif * 0.985)} · 9 dias: {fmtBRL(bonif * 0.98)}
           </div>
         )}
       </div>

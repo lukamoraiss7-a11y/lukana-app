@@ -275,6 +275,10 @@ export async function updateUserActivity(userId, nome, role) {
   await redis.hset('user:activity', { [userId]: JSON.stringify({ nome, role, timestamp: new Date().toISOString() }) });
 }
 
+export async function clearUserActivity() {
+  await redis.del('user:activity');
+}
+
 export async function getActiveUsers(timeoutSeconds = 300) {
   const activities = await redis.hgetall('user:activity') || {};
   const now = Date.now();

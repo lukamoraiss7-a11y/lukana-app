@@ -1720,7 +1720,14 @@ export default function CeoPage() {
           <div className="px-3 py-3">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs text-gray-400 uppercase tracking-wide font-bold px-1">Acessos</p>
-              <button onClick={fetchLoginHistory} className="px-3 py-1.5 rounded-full text-xs font-bold border-2 border-gold text-gold-d bg-white">Atualizar</button>
+              <div className="flex gap-2">
+                <button onClick={async () => {
+                  if (!confirm('Limpar histórico de acessos?')) return;
+                  await fetch('/api/login-history', { method: 'DELETE' });
+                  fetchLoginHistory();
+                }} className="px-3 py-1.5 rounded-full text-xs font-bold border-2 border-red-300 text-red-400 bg-white">Limpar</button>
+                <button onClick={fetchLoginHistory} className="px-3 py-1.5 rounded-full text-xs font-bold border-2 border-gold text-gold-d bg-white">Atualizar</button>
+              </div>
             </div>
             {loadingAcessos && <div className="text-center py-10 text-sm text-gray-400">Carregando...</div>}
             {!loadingAcessos && loginHistory.length === 0 && (
