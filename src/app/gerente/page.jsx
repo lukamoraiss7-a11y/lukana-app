@@ -450,6 +450,9 @@ function RegistrosTab({ session, obras }) {
   const [fotoFile, setFotoFile]     = useState(null);
   const [fotoData, setFotoData]     = useState(null);
   const [uploadingFoto, setUploadingFoto] = useState(false);
+  const [registroFotoFile, setRegistroFotoFile] = useState(null);
+  const [registroFotoData, setRegistroFotoData] = useState(null);
+  const [registroDragOver, setRegistroDragOver] = useState(false);
   const [toast, setToast]           = useState('');
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2200); };
 
@@ -491,10 +494,19 @@ function RegistrosTab({ session, obras }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ autor: session.nome, role: session.role, texto, tipo, obra_id: obraRegistro, obra_nome: obraObj?.nome }),
       });
+      if (registroFotoFile) {
+        const form = new FormData();
+        form.append('task_id', obraRegistro);
+        form.append('file', registroFotoFile);
+        await fetch('/api/attachment', { method: 'POST', body: form });
+        setRegistroFotoFile(null);
+        setRegistroFotoData(null);
+      }
       setTexto('');
       setObraRegistro('');
       fetchRegistros();
-    } catch {}
+      showToast('Registro salvo');
+    } catch { showToast('Erro ao salvar'); }
     setSaving(false);
   };
 
@@ -511,6 +523,34 @@ function RegistrosTab({ session, obras }) {
       showToast('Foto enviada para o ClickUp');
     } catch { showToast('Erro ao enviar foto'); }
     setUploadingFoto(false);
+  };
+
+  const handleRegistroFotoSelect = (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('Selecione uma imagem');
+      return;
+    }
+    setRegistroFotoFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setRegistroFotoData(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleRegistroDragOver = (e) => {
+    e.preventDefault();
+    setRegistroDragOver(true);
+  };
+
+  const handleRegistroDragLeave = () => {
+    setRegistroDragOver(false);
+  };
+
+  const handleRegistroDrop = (e) => {
+    e.preventDefault();
+    setRegistroDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleRegistroFotoSelect(file);
   };
 
   const tipoStyle = (t) => t === 'obra' ? 'border-l-4 border-gold bg-gold/5' : t === 'fabrica' ? 'border-l-4 border-blue-300 bg-blue-50/40' : 'border-l-4 border-gray-200 bg-white';
@@ -536,6 +576,36 @@ function RegistrosTab({ session, obras }) {
         <textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={3}
           placeholder="O que aconteceu? Evolução, bloqueio, decisão tomada..."
           className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-gold placeholder:text-gray-300 mb-3" />
+        {/* Foto registro */}
+        <div className="mb-3">
+          {registroFotoData ? (
+            <div className="relative inline-block">
+              <img src={registroFotoData} alt="foto" className="h-20 w-20 object-cover rounded-xl border-2 border-gold" />
+              <button type="button" onClick={() => { setRegistroFotoFile(null); setRegistroFotoData(null); }}
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center font-bold">×</button>
+            </div>
+          ) : (
+            <div
+              onDragOver={handleRegistroDragOver}
+              onDragLeave={handleRegistroDragLeave}
+              onDrop={handleRegistroDrop}
+              className={`border-2 border-dashed rounded-xl px-4 py-3 transition-colors ${registroDragOver ? 'border-gold bg-gold/5' : 'border-gray-200 bg-gray-50 hover:border-gold'}`}>
+              <label className="flex flex-col items-center gap-2 cursor-pointer">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <span className="text-xs font-bold text-gray-600">Foto · Câmera ou Galeria</span>
+                <span className="text-[10px] text-gray-400">ou arraste uma foto aqui</span>
+                <input type="file" accept="image/*" capture="environment" className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleRegistroFotoSelect(f);
+                    e.target.value = '';
+                  }} />
+              </label>
+            </div>
+          )}
+        </div>
         <button onClick={handleAdd} disabled={saving || !texto.trim() || !obraRegistro}
           className="w-full py-2.5 bg-gold text-navy font-bold rounded-xl text-sm disabled:opacity-50">
           {saving ? 'Salvando...' : 'Registrar'}
