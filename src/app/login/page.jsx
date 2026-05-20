@@ -279,11 +279,11 @@ function LoginForm() {
   if (nextUrl === '/ceo' && roleParam === 'ariel') label = 'Head de Gestão';
 
   return (
-    <main className="min-h-dvh flex flex-col items-center justify-center p-6 bg-navy">
+    <main className="min-h-dvh flex flex-col items-center justify-center p-6 bg-navy relative">
       <Link href="/">
-        <img src="/logo.png" alt="Lukana" className="h-12 w-auto mb-3 brightness-0 invert sepia saturate-[3] hue-rotate-[5deg]" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/aresta-logo.png" alt="ArestA" style={{ width: 'min(340px, 82vw)', marginBottom: 36, filter: 'drop-shadow(0 0 32px rgba(200,146,42,0.28))' }} />
       </Link>
-      <div className="text-white/40 text-sm mb-10">{label}</div>
 
       {nextUrl === '/gerente'       && <GerenteLogin onSuccess={onSuccess} />}
       {nextUrl === '/coordenadores' && <CoordLogin   onSuccess={onSuccess} presetRole={roleParam} />}
@@ -300,6 +300,14 @@ function LoginForm() {
       )}
 
       <Link href="/" className="mt-10 text-white/25 text-xs">Voltar ao início</Link>
+
+      <div style={{ position: 'absolute', bottom: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/lukana-logo.png" alt="Lukana Marcenaria" style={{ width: 90, opacity: 0.4 }} />
+        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          © 2026 Lukana Marcenaria — Todos os direitos reservados
+        </span>
+      </div>
     </main>
   );
 }
